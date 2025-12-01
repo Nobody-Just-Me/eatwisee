@@ -18,6 +18,7 @@ class _ScanPageState extends State<ScanPage> {
   MobileScannerController cameraController = MobileScannerController();
   bool _isProcessing = false;
   String? _lastScannedCode;
+  bool _isTorchOn = false; // Track torch state manually
 
   // Warna tema
   static const Color _primaryColor = Color(0xFF388E3C);
@@ -50,18 +51,16 @@ class _ScanPageState extends State<ScanPage> {
         actions: [
           // Toggle flash
           IconButton(
-            icon: ValueListenableBuilder(
-              valueListenable: cameraController.torchState,
-              builder: (context, state, child) {
-                switch (state) {
-                  case TorchState.off:
-                    return const Icon(Icons.flash_off, color: Colors.white);
-                  case TorchState.on:
-                    return const Icon(Icons.flash_on, color: Colors.amber);
-                }
-              },
+            icon: Icon(
+              _isTorchOn ? Icons.flash_on : Icons.flash_off,
+              color: _isTorchOn ? Colors.amber : Colors.white,
             ),
-            onPressed: () => cameraController.toggleTorch(),
+            onPressed: () {
+              setState(() {
+                _isTorchOn = !_isTorchOn;
+              });
+              cameraController.toggleTorch();
+            },
           ),
           // Switch camera
           IconButton(
@@ -203,13 +202,10 @@ class _ScanPageState extends State<ScanPage> {
       _lastScannedCode = barcode;
     });
 
-    // Vibrate atau sound feedback (opsional)
-    // HapticFeedback.mediumImpact();
-
     // Stop scanner sementara
     await cameraController.stop();
 
-    // TODO: Fetch product dari API
+    // Fetch product dari API
     await _fetchProductAndNavigate(barcode);
 
     setState(() {
@@ -221,37 +217,20 @@ class _ScanPageState extends State<ScanPage> {
   // FETCH PRODUCT & NAVIGATE
   // ============================================
   Future<void> _fetchProductAndNavigate(String barcode) async {
-    
     try {
-      // TODO: Uncomment ini setelah ProductService dibuat
-       final product = await ProductService.getProductByBarcode(barcode);
+      // Fetch product dari API
+      final product = await ProductService.getProductByBarcode(barcode);
       
       // Sementara pakai delay untuk simulasi
       await Future.delayed(const Duration(seconds: 1));
       
-      // Simulasi data (hapus ini nanti)
-      // showDialog(
-      //   context: context,
-      //   builder: (context) => AlertDialog(
-      //     title: Text('Barcode Detected!', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-      //     content: Text('Barcode: $barcode\n\nIntegrasi dengan API akan dilakukan selanjutnya.'),
-      //     actions: [
-      //       TextButton(
-      //         onPressed: () {
-      //           Navigator.pop(context);
-      //           Navigator.pop(context); // Kembali ke home
-      //         },
-      //         child: const Text('OK'),
-      //       ),
-      //     ],
-      //   ),
-      // );
+      if (!mounted) return;
       
-      // NANTI: Navigate ke halaman hasil
-      print(" Navigating to ReportScreenApi with product: $product");
+      // Navigate ke halaman hasil
+      print("Navigating to ReportScreenApi with product: $product");
       int idProduct = product != null ? product['id'] as int : 0;
       if (product != null) {
-        print(" Product found: $product");
+        print("Product found: $product");
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -263,6 +242,7 @@ class _ScanPageState extends State<ScanPage> {
       }
       
     } catch (e) {
+      if (!mounted) return;
       _showErrorDialog('Gagal memuat data produk: $e');
     }
   }
@@ -276,11 +256,10 @@ class _ScanPageState extends State<ScanPage> {
 
     if (image != null) {
       setState(() => _isProcessing = true);
-
-      // TODO: Implementasi OCR atau image recognition
-      // Untuk sementara, tampilkan dialog bahwa fitur masih dalam pengembangan
       
       setState(() => _isProcessing = false);
+      
+      if (!mounted) return;
       
       showDialog(
         context: context,

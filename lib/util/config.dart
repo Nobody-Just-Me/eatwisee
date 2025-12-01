@@ -9,7 +9,7 @@ class AppConfig {
       true; // true = HP Fisik, false = Emulator/Simulator
 
   // IP Laptop kamu (untuk HP fisik)
-  static const String laptopIP = '192.168.56.1';
+  static const String laptopIP = '172.24.121.28';
 
   // ============================================
   // BASE URL (Otomatis sesuai device)

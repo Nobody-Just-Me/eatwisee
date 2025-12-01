@@ -31,12 +31,18 @@ class _LoginPageState extends State<LoginPage> {
     stops: [0.0, 0.44, 0.97],
   ).createShader(const Rect.fromLTWH(0.0, 0.0, 300.0, 70.0));
 
-  static final TextStyle _titleStyle = GoogleFonts.padauk(fontSize: 59.21, fontWeight: FontWeight.w700);
-  static final TextStyle _subtitleStyle = GoogleFonts.inter(fontSize: 28.12, fontWeight: FontWeight.w500, color: _textColorBlack);
-  static final TextStyle _bodyStyle = GoogleFonts.inter(fontSize: 18.62, fontWeight: FontWeight.w300, color: _textColorBlack);
-  static final TextStyle _buttonTextStyle = GoogleFonts.inter(fontSize: 24.23, fontWeight: FontWeight.w400, color: _textColorBlack);
-  static final TextStyle _bottomTextStyle = GoogleFonts.inter(fontSize: 17.88, fontWeight: FontWeight.w300, color: _textColorBlack);
-  static final TextStyle _bottomLinkStyle = GoogleFonts.inter(fontSize: 17.88, fontWeight: FontWeight.w700, color: _signupLinkColor);
+  static final TextStyle _titleStyle =
+      GoogleFonts.padauk(fontSize: 59.21, fontWeight: FontWeight.w700);
+  static final TextStyle _subtitleStyle = GoogleFonts.inter(
+      fontSize: 28.12, fontWeight: FontWeight.w500, color: _textColorBlack);
+  static final TextStyle _bodyStyle = GoogleFonts.inter(
+      fontSize: 18.62, fontWeight: FontWeight.w300, color: _textColorBlack);
+  static final TextStyle _buttonTextStyle = GoogleFonts.inter(
+      fontSize: 24.23, fontWeight: FontWeight.w400, color: _textColorBlack);
+  static final TextStyle _bottomTextStyle = GoogleFonts.inter(
+      fontSize: 17.88, fontWeight: FontWeight.w300, color: _textColorBlack);
+  static final TextStyle _bottomLinkStyle = GoogleFonts.inter(
+      fontSize: 17.88, fontWeight: FontWeight.w700, color: _signupLinkColor);
 
   static const double _sidePadding = 32.0;
   static const double _buttonHeight = 60.0;
@@ -57,22 +63,27 @@ class _LoginPageState extends State<LoginPage> {
               ShaderMask(
                 blendMode: BlendMode.srcIn,
                 shaderCallback: (bounds) => _titleGradient,
-                child: Text('EATWISE', textAlign: TextAlign.center, style: _titleStyle),
+                child: Text('EATWISE',
+                    textAlign: TextAlign.center, style: _titleStyle),
               ),
               const SizedBox(height: 36),
-              Text('Continue Your Journey', textAlign: TextAlign.center, style: _subtitleStyle),
+              Text('Continue Your Journey',
+                  textAlign: TextAlign.center, style: _subtitleStyle),
               const SizedBox(height: 12),
-              Text('lets track meals, calorie, and more for your health', textAlign: TextAlign.center, style: _bodyStyle),
+              Text('lets track meals, calorie, and more for your health',
+                  textAlign: TextAlign.center, style: _bodyStyle),
               const SizedBox(height: 38),
               TextFormField(
                 controller: usernameCont,
-                decoration: const InputDecoration(icon: Icon(Icons.person), hintText: 'Username'),
+                decoration: const InputDecoration(
+                    icon: Icon(Icons.person), hintText: 'Username'),
               ),
               const SizedBox(height: 24),
               TextFormField(
                 controller: passCont,
                 obscureText: true,
-                decoration: const InputDecoration(icon: Icon(Icons.vpn_key), hintText: 'Password'),
+                decoration: const InputDecoration(
+                    icon: Icon(Icons.vpn_key), hintText: 'Password'),
               ),
               const SizedBox(height: 40),
               ElevatedButton(
@@ -80,7 +91,8 @@ class _LoginPageState extends State<LoginPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _buttonColor,
                   fixedSize: const Size(double.infinity, _buttonHeight),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_buttonRadius)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(_buttonRadius)),
                   elevation: 0,
                 ),
                 child: Text('Login', style: _buttonTextStyle),
@@ -96,12 +108,15 @@ class _LoginPageState extends State<LoginPage> {
                     style: _bottomTextStyle,
                     children: [
                       TextSpan(
-                        text: 'Sign up',
-                        style: _bottomLinkStyle,
-                        recognizer: TapGestureRecognizer()..onTap = () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => SignUpPage()));
-                        }
-                      ),
+                          text: 'Sign up',
+                          style: _bottomLinkStyle,
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => SignUpPage()));
+                            }),
                     ],
                   ),
                 ),
@@ -120,7 +135,8 @@ class _LoginPageState extends State<LoginPage> {
         Expanded(child: Divider(color: _dividerColor, thickness: 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Icon(Icons.restaurant_menu, color: _dividerColor, size: _iconSize),
+          child: Icon(Icons.restaurant_menu,
+              color: _dividerColor, size: _iconSize),
         ),
         Expanded(child: Divider(color: _dividerColor, thickness: 1)),
       ],
@@ -128,13 +144,22 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void handleLogin() async {
+    print('=== HANDLE LOGIN CALLED ===');
+    print('Username: ${usernameCont.text}');
+    print('Password length: ${passCont.text.length}');
+
     try {
-      final response = await login(User(username: usernameCont.text, password: passCont.text));
+      print('Calling login function...');
+      final response = await login(
+          User(username: usernameCont.text, password: passCont.text));
+      print('Login function returned');
 
       if (response == null || response.body.isEmpty) {
+        print('Response is null or empty');
         dialog(context, "Tidak ada respon dari server");
         return;
       }
+      print('Response received: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -153,7 +178,8 @@ class _LoginPageState extends State<LoginPage> {
             userData['email']?.toString() ?? "",
           );
 
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Indexhome.HomeContent()));
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (context) => Indexhome.HomeContent()));
         } else {
           dialog(context, "Data user tidak ditemukan");
         }
@@ -163,7 +189,10 @@ class _LoginPageState extends State<LoginPage> {
       } else {
         dialog(context, "Terjadi kesalahan server");
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('=== LOGIN ERROR ===');
+      print('Error: $e');
+      print('StackTrace: $stackTrace');
       dialog(context, "Terjadi kesalahan: $e");
     }
   }

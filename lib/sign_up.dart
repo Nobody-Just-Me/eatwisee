@@ -27,12 +27,18 @@ class _SignUpPageState extends State<SignUpPage> {
     stops: [0.0, 0.44, 0.97],
   ).createShader(const Rect.fromLTWH(0.0, 0.0, 300.0, 70.0));
 
-  static final TextStyle _titleStyle = GoogleFonts.padauk(fontSize: 59.21, fontWeight: FontWeight.w700);
-  static final TextStyle _subtitleStyle = GoogleFonts.inter(fontSize: 28.12, fontWeight: FontWeight.w500, color: _textColorBlack);
-  static final TextStyle _bodyStyle = GoogleFonts.inter(fontSize: 18.62, fontWeight: FontWeight.w300, color: _textColorBlack);
-  static final TextStyle _buttonTextStyle = GoogleFonts.inter(fontSize: 24.23, fontWeight: FontWeight.w400, color: _textColorBlack);
-  static final TextStyle _bottomTextStyle = GoogleFonts.inter(fontSize: 17.88, fontWeight: FontWeight.w300, color: _textColorBlack);
-  static final TextStyle _bottomLinkStyle = GoogleFonts.inter(fontSize: 17.88, fontWeight: FontWeight.w700, color: _signinLinkColor);
+  static final TextStyle _titleStyle =
+      GoogleFonts.padauk(fontSize: 59.21, fontWeight: FontWeight.w700);
+  static final TextStyle _subtitleStyle = GoogleFonts.inter(
+      fontSize: 28.12, fontWeight: FontWeight.w500, color: _textColorBlack);
+  static final TextStyle _bodyStyle = GoogleFonts.inter(
+      fontSize: 18.62, fontWeight: FontWeight.w300, color: _textColorBlack);
+  static final TextStyle _buttonTextStyle = GoogleFonts.inter(
+      fontSize: 24.23, fontWeight: FontWeight.w400, color: _textColorBlack);
+  static final TextStyle _bottomTextStyle = GoogleFonts.inter(
+      fontSize: 17.88, fontWeight: FontWeight.w300, color: _textColorBlack);
+  static final TextStyle _bottomLinkStyle = GoogleFonts.inter(
+      fontSize: 17.88, fontWeight: FontWeight.w700, color: _signinLinkColor);
 
   static const double _sidePadding = 32.0;
   static const double _buttonHeight = 60.0;
@@ -53,27 +59,33 @@ class _SignUpPageState extends State<SignUpPage> {
               ShaderMask(
                 blendMode: BlendMode.srcIn,
                 shaderCallback: (bounds) => _titleGradient,
-                child: Text('EATWISE', textAlign: TextAlign.center, style: _titleStyle),
+                child: Text('EATWISE',
+                    textAlign: TextAlign.center, style: _titleStyle),
               ),
               const SizedBox(height: 36),
-              Text('Create Your Account', textAlign: TextAlign.center, style: _subtitleStyle),
+              Text('Create Your Account',
+                  textAlign: TextAlign.center, style: _subtitleStyle),
               const SizedBox(height: 12),
-              Text('Sign Up Now, Thank Us Later', textAlign: TextAlign.center, style: _bodyStyle),
+              Text('Sign Up Now, Thank Us Later',
+                  textAlign: TextAlign.center, style: _bodyStyle),
               const SizedBox(height: 48),
               TextFormField(
                 controller: usernameCont,
-                decoration: const InputDecoration(icon: Icon(Icons.person), hintText: 'username Lengkap'),
+                decoration: const InputDecoration(
+                    icon: Icon(Icons.person), hintText: 'username Lengkap'),
               ),
               const SizedBox(height: 24),
               TextFormField(
                 controller: emailCont,
-                decoration: const InputDecoration(icon: Icon(Icons.email), hintText: 'Email'),
+                decoration: const InputDecoration(
+                    icon: Icon(Icons.email), hintText: 'Email'),
               ),
               const SizedBox(height: 24),
               TextFormField(
                 controller: passwordCont,
                 obscureText: true,
-                decoration: const InputDecoration(icon: Icon(Icons.vpn_key), hintText: 'Password'),
+                decoration: const InputDecoration(
+                    icon: Icon(Icons.vpn_key), hintText: 'Password'),
               ),
               const SizedBox(height: 40),
               ElevatedButton(
@@ -81,7 +93,8 @@ class _SignUpPageState extends State<SignUpPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _buttonColor,
                   fixedSize: const Size(double.infinity, _buttonHeight),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_buttonRadius)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(_buttonRadius)),
                   elevation: 0,
                 ),
                 child: Text('Register', style: _buttonTextStyle),
@@ -97,12 +110,15 @@ class _SignUpPageState extends State<SignUpPage> {
                     style: _bottomTextStyle,
                     children: [
                       TextSpan(
-                        text: 'Sign In',
-                        style: _bottomLinkStyle,
-                        recognizer: TapGestureRecognizer()..onTap = () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => LoginPage()));
-                        }
-                      ),
+                          text: 'Sign In',
+                          style: _bottomLinkStyle,
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => LoginPage()));
+                            }),
                     ],
                   ),
                 ),
@@ -121,7 +137,8 @@ class _SignUpPageState extends State<SignUpPage> {
         Expanded(child: Divider(color: _dividerColor, thickness: 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Icon(Icons.restaurant_menu, color: _dividerColor, size: _iconSize),
+          child: Icon(Icons.restaurant_menu,
+              color: _dividerColor, size: _iconSize),
         ),
         Expanded(child: Divider(color: _dividerColor, thickness: 1)),
       ],
@@ -129,18 +146,37 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   void prosesRegistrasi() async {
-    final response = await userCreate(User(username: usernameCont.text, password: passwordCont.text, email: emailCont.text));
-    
-    if (response != null) {
-      if (response.statusCode == 200) {
-        var jsonResp = json.decode(response.body);
-        Navigator.pop(context);
-        dialog(context, jsonResp['message'] ?? 'Registrasi berhasil!');
+    print('=== PROSES REGISTRASI CALLED ===');
+    print('Username: ${usernameCont.text}');
+    print('Email: ${emailCont.text}');
+    print('Password length: ${passwordCont.text.length}');
+
+    try {
+      print('Calling userCreate function...');
+      final response = await userCreate(User(
+          username: usernameCont.text,
+          password: passwordCont.text,
+          email: emailCont.text));
+      print('userCreate function returned');
+
+      if (response != null) {
+        print('Response: ${response.statusCode} - ${response.body}');
+        if (response.statusCode == 200) {
+          var jsonResp = json.decode(response.body);
+          Navigator.pop(context);
+          dialog(context, jsonResp['message'] ?? 'Registrasi berhasil!');
+        } else {
+          dialog(context, "Registrasi gagal: ${response.body}");
+        }
       } else {
-        dialog(context, "Registrasi gagal: ${response.body}");
+        print('Response is null!');
+        dialog(context, "Tidak ada respon dari server");
       }
-    } else {
-      dialog(context, "Tidak ada respon dari server");
+    } catch (e, stackTrace) {
+      print('=== REGISTER ERROR ===');
+      print('Error: $e');
+      print('StackTrace: $stackTrace');
+      dialog(context, "Terjadi kesalahan: $e");
     }
   }
 }

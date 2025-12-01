@@ -9,7 +9,7 @@ class AppConfig {
       true; // true = HP Fisik, false = Emulator/Simulator
 
   // IP Laptop kamu (untuk HP fisik)
-  static const String laptopIP = '192.168.1.140'; // ← UDAH DIGANTI
+  static const String laptopIP = '172.24.121.28'; // IP Hotspot HP
 
   // ============================================
   // BASE URL (Otomatis sesuai device)

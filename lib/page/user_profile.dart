@@ -436,32 +436,45 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  Widget _buildEditableRow({
-    required String label,
-    required String value,
-    required String unit,
-    required VoidCallback onEdit
-  }) {
-    return Container(
-      height: _fieldHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: _textFieldFillColor,
-        borderRadius: BorderRadius.circular(_fieldRadius),
-        border: Border.all(width: 1.0, color: _dividerColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text("$label: $value $unit", style: _valueTextStyle),
-          IconButton(
-            icon: const Icon(Icons.edit, color: _textColorBlack),
-            onPressed: onEdit,
+Widget _buildEditableRow({
+  required String label,
+  required String value,
+  required String unit,
+  required VoidCallback onEdit
+}) {
+  return Container(
+    height: _fieldHeight,
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    decoration: BoxDecoration(
+      color: _textFieldFillColor,
+      borderRadius: BorderRadius.circular(_fieldRadius),
+      border: Border.all(width: 1.0, color: _dividerColor),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // BERIKUT PERBAIKANNYA:
+        // Gunakan Expanded agar Text menyesuaikan ruang sisa
+        Expanded(
+          child: Text(
+            "$label: $value $unit", 
+            style: _valueTextStyle,
+            overflow: TextOverflow.ellipsis, // Tambahkan titik-titik (...) jika masih kepanjangan
+            maxLines: 1, // Pastikan hanya 1 baris agar rapi
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        
+        // Berikan sedikit jarak antara teks dan tombol (Sunnah memperindah tampilan)
+        const SizedBox(width: 8), 
+
+        IconButton(
+          icon: const Icon(Icons.edit, color: _textColorBlack),
+          onPressed: onEdit,
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildNotificationRow({
     required String label,

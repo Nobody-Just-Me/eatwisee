@@ -144,16 +144,38 @@ class _ReportScreenApiState extends State<ReportScreenApi> {
     
     return risiko;
   }
-
-  Map<String, dynamic> _performClientSideAnalysis(
+Map<String, dynamic> _performClientSideAnalysis(
     Map<String, dynamic> product,
     Map<String, dynamic> profile,
   ) {
     bool statusAman = true;
     List<String> peringatanAlergi = [];
     List<String> peringatanPenyakit = [];
+    List<String> komposisiProduk = [];
+    
+    // Parsing komposisi
+    if (product['komposisi_array'] != null) {
+      komposisiProduk = List<String>.from(product['komposisi_array']);
+    }
 
-    // Cek alergi
+    // // --- 1. LOGIKA DETEKSI BAHAN DIHINDARI ---
+    String userPantanganInput = profile['Bahan_dihindari'] ?? ""; 
+    print(  'User Pantangan Input: $userPantanganInput' 
+    );
+    
+    List<String> bahanTerlarangDitemukan = IngredientChecker.check(
+      komposisiProduk, 
+      userPantanganInput
+    );
+
+    if (bahanTerlarangDitemukan.isNotEmpty) {
+      statusAman = false;
+      // PERUBAHAN DISINI: Format teks agar lebih jelas
+      // Contoh Output: "⚠️ MENGANDUNG PANTANGAN: Susu Segar, Keju"
+      peringatanAlergi.add(' MENGANDUNG PANTANGAN:\n${bahanTerlarangDitemukan.join(", ")}');
+    }
+
+    // --- 2. LOGIKA ALERGI DARI DATABASE (Tetap Sama) ---
     if (profile['alergi_gluten'] == 1 && product['mengandung_gluten'] == 1) {
       statusAman = false;
       peringatanAlergi.add('⚠️ MENGANDUNG GLUTEN');
@@ -171,25 +193,13 @@ class _ReportScreenApiState extends State<ReportScreenApi> {
       peringatanAlergi.add('⚠️ MENGANDUNG SUSU');
     }
 
-    // Cek penyakit
-    if (profile['riwayat_diabetes'] == 1 && product['tingkat_gula'] == 'tinggi') {
-      peringatanPenyakit.add('⚠️ GULA TINGGI - Berisiko untuk diabetes');
-    }
-    if (profile['riwayat_kolesterol'] == 1 && product['tingkat_lemak'] == 'tinggi') {
-      peringatanPenyakit.add('⚠️ LEMAK TINGGI - Berisiko untuk kolesterol');
-    }
-    if (profile['riwayat_hipertensi'] == 1 && product['tingkat_garam'] == 'tinggi') {
-      peringatanPenyakit.add('⚠️ GARAM TINGGI - Berisiko untuk hipertensi');
-    }
-
-    if (peringatanPenyakit.isNotEmpty) {
-      statusAman = false;
-    }
+    
 
     return {
       'status_aman': statusAman,
-      'peringatan_alergi': peringatanAlergi,
+      'peringatan_alergi': peringatanAlergi, // List ini yang akan ditampilkan di UI
       'peringatan_penyakit': peringatanPenyakit,
+      'bahan_terlarang_ditemukan': bahanTerlarangDitemukan, // Ini untuk highlight di list komposisi bawah
     };
   }
 
@@ -354,7 +364,9 @@ class _ReportScreenApiState extends State<ReportScreenApi> {
                   ],
 
                   // Peringatan alergi
-                  if (_analysis != null && _analysis!['peringatan_alergi'].isNotEmpty) ...[
+                  if (_analysis != null && _analysis!['bahan_terlarang_ditemukan'].isNotEmpty) ...[
+                    
+                    
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -369,13 +381,14 @@ class _ReportScreenApiState extends State<ReportScreenApi> {
                             children: [
                               const Icon(Icons.warning, color: Colors.red),
                               const SizedBox(width: 8),
-                              Text(
-                                'PERINGATAN ALERGI',
+                              Expanded(child: Text(
+                                'PERINGATAN! ADA BAHAN MAKANAN YANG DIHINDARI',
                                 style: GoogleFonts.inter(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.red,
                                 ),
-                              ),
+                              ),)
+                              
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -441,7 +454,8 @@ class _ReportScreenApiState extends State<ReportScreenApi> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: composition.map((item) {
-                      return _buildCompositionItem(item, isGood: isGood);
+                      List<String> detectedDangers = List<String>.from(_analysis!['bahan_terlarang_ditemukan'] ?? []);
+                      return _buildCompositionItem(item, dangerList: detectedDangers);
                     }).toList(),
                   ),
                   const SizedBox(height: 24),
@@ -624,27 +638,49 @@ class _ReportScreenApiState extends State<ReportScreenApi> {
     );
   }
 
-  Widget _buildCompositionItem(String text, {required bool isGood}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
-      child: Row(
-        children: [
-          Text(
-            '•  ',
-            style: TextStyle(
-              color: isGood ? Colors.black : Colors.red,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Expanded(
-            child: Text(text, style: GoogleFonts.inter(fontSize: 16)),
-          ),
-        ],
-      ),
-    );
-  }
+  // Ubah parameternya
+Widget _buildCompositionItem(String text, {required List<String> dangerList}) {
+  
+  // Cek apakah bahan ini (text) ada di dalam daftar bahaya (dangerList)
+  // Kita pakai contains agar "Susu Bubuk" terdeteksi jika bahayanya "Susu"
+  bool isDangerous = dangerList.any((danger) => text.toLowerCase().contains(danger.toLowerCase()));
+  
+  // Jika berbahaya, warna MERAH. Jika aman, warna HITAM.
+  Color textColor = isDangerous ? Colors.red : Colors.black;
+  FontWeight textWeight = isDangerous ? FontWeight.bold : FontWeight.normal;
 
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 4.0),
+    child: Row(
+      children: [
+        Text(
+          '•  ',
+          style: TextStyle(
+            color: textColor, // Icon bullet ikut merah
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            text, 
+            style: GoogleFonts.inter(
+                fontSize: 16, 
+                color: textColor, // Teks jadi merah
+                fontWeight: textWeight // Teks jadi tebal
+            )
+          ),
+        ),
+        // Tambahkan icon peringatan kecil di samping teks
+        if (isDangerous) 
+          const Padding(
+            padding: EdgeInsets.only(left: 8.0),
+            child: Icon(Icons.warning_amber_rounded, color: Colors.red, size: 18),
+          )
+      ],
+    ),
+  );
+}
   Future<void> _handleAddConsumption() async {
     if (_userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -696,5 +732,40 @@ class _ReportScreenApiState extends State<ReportScreenApi> {
     } finally {
       setState(() => _isSaving = false);
     }
+  }
+}
+class IngredientChecker {
+  
+  // Input: 
+  // productIngredients = ["Susu Segar", "Vitamin D"]
+  // userAvoidInput = "susu, gula"
+  static List<String> check(List<String> productIngredients, String userAvoidInput) {
+    
+    // 1. Validasi awal
+    if (userAvoidInput.isEmpty) return [];
+
+    // 2. Pecah String input user menjadi List kata kunci
+    // "susu, gula" -> ["susu", "gula"]
+    List<String> userKeywords = userAvoidInput.split(',')
+        .map((e) => e.trim().toLowerCase()) // Hapus spasi & kecilkan huruf
+        .where((e) => e.isNotEmpty)         // Hapus input kosong (misal "susu,,gula")
+        .toList();
+
+    List<String> detectedIngredients = [];
+
+    // 3. Loop setiap bahan di produk
+    for (var ingredient in productIngredients) {
+      String item = ingredient.toLowerCase();
+
+      // 4. Cek apakah bahan ini mengandung SALAH SATU dari keyword user
+      for (var keyword in userKeywords) {
+        if (item.contains(keyword)) {
+          detectedIngredients.add(ingredient); // Simpan nama asli bahannya
+          break; // Lanjut ke bahan berikutnya agar tidak duplikat
+        }
+      }
+    }
+
+    return detectedIngredients;
   }
 }

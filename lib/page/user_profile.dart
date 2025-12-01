@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:eatwise2/services/profile_service_fixed.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart'; // Tambahkan di pubspec.yaml: intl: ^0.18.0
 
 class UserProfileScreen extends StatefulWidget {
   final int userId;
@@ -65,21 +64,34 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   static const double _buttonRadius = 10.0;
 
   // --- STATE DATA FISIK ---
+<<<<<<< HEAD
   DateTime? _tanggalLahir;
   int _usia = 0;
   String _berat = "65.5";
   String _tinggi = "175";
+=======
+  DateTime? _tanggalLahir; // Ganti dari String _usia
+  int _usia = 0; // Computed dari tanggal lahir
+  String _berat = "65.5";   
+  String _tinggi = "175";   
+>>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
   String _username = "User";
 
-  // --- State Checkbox Riwayat Kesehatan ---
+  // --- State Checkbox Riwayat Kesehatan (Tambah Hipertensi) ---
   bool _diabetesChecked = false;
   bool _kolesterolChecked = false;
-  bool _hipertensiChecked = false;
+  bool _hipertensiChecked = false; // BARU
 
+<<<<<<< HEAD
   // --- STATE BARU: Bahan yang Dihindari ---
   final TextEditingController _bahanDihindariController =
       TextEditingController();
   List<String> _bahanDihindariList = [];
+=======
+  // --- STATE BARU: Bahan yang Dihindari (Gunakan TextField) ---
+  final TextEditingController _bahanDihindariController = TextEditingController();
+  List<String> _bahanDihindariList = []; // List bahan yang sudah dinormalisasi
+>>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
 
   // --- STATE NOTIFIKASI MAKAN ---
   bool _notifSarapan = true;
@@ -92,7 +104,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUsername();
     _loadProfile();
   }
 
@@ -102,16 +113,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _loadUsername() async {
-    final prefs = await SharedPreferences.getInstance();
-    String loadedUsername = prefs.getString('username') ?? 'User';
-    setState(() {
-      _username = loadedUsername;
-    });
-  }
-
   Future<void> _loadProfile() async {
     setState(() => _isLoading = true);
+<<<<<<< HEAD
 
     try {
       print("🔍 DEBUG: Loading profile untuk user ID: ${widget.userId}");
@@ -176,11 +180,53 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           SnackBar(content: Text('Error loading profile: $e')),
         );
       }
+=======
+    
+    final profile = await ProfileService.getProfile(widget.userId);
+    
+    if (profile != null) {
+      setState(() {
+        // Load tanggal lahir dan hitung umur
+        _tanggalLahir = ProfileService.parseBirthDate(profile['tanggal_lahir']);
+        if (_tanggalLahir != null) {
+          _usia = ProfileService.calculateAge(_tanggalLahir!);
+        }
+        
+        _berat = profile['berat_badan']?.toString() ?? "65.5";
+        _tinggi = profile['tinggi_badan']?.toString() ?? "175";
+        _diabetesChecked = profile['riwayat_diabetes'] == 1;
+        _kolesterolChecked = profile['riwayat_kolesterol'] == 1;
+        _hipertensiChecked = profile['riwayat_hipertensi'] == 1; // BARU
+        _username = profile['nama_lengkap']?.toString() ?? "User";
+        
+        // Load bahan yang dihindari
+        if (profile['Bahan_dihindari'] != null && profile['Bahan_dihindari'].isNotEmpty) {
+          _bahanDihindariList = _normalizeBahanList(profile['Bahan_dihindari']);
+          _bahanDihindariController.text = _bahanDihindariList.join(', ');
+        }
+        
+        // Load waktu notifikasi jika ada
+        if (profile['waktu_sarapan'] != null) {
+          _waktuSarapan = _parseTimeString(profile['waktu_sarapan']);
+        }
+        if (profile['waktu_siang'] != null) {
+          _waktuSiang = _parseTimeString(profile['waktu_siang']);
+        }
+        if (profile['waktu_malam'] != null) {
+          _waktuMalam = _parseTimeString(profile['waktu_malam']);
+        }
+        
+        _notifSarapan = profile['notif_sarapan_aktif'] == 1;
+        _notifSiang = profile['notif_siang_aktif'] == 1;
+        _notifMalam = profile['notif_malam_aktif'] == 1;
+      });
+>>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
     }
 
     setState(() => _isLoading = false);
   }
 
+  // Helper untuk parse string waktu "HH:mm:ss" ke TimeOfDay
   TimeOfDay _parseTimeString(String timeString) {
     try {
       final parts = timeString.split(':');
@@ -194,7 +240,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
+<<<<<<< HEAD
   /// ✅ NORMALISASI BAHAN - KUNCI UTAMA UNTUK MATCHING
+=======
+  // Normalisasi list bahan (lowercase, trim, remove duplicates)
+>>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
   List<String> _normalizeBahanList(String input) {
     if (input.trim().isEmpty) return [];
 
@@ -202,12 +252,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         .split(',')
         .map((e) => e.trim().toLowerCase())
         .where((e) => e.isNotEmpty)
+<<<<<<< HEAD
         .toSet() // Hapus duplikat
+=======
+        .toSet() // Remove duplicates
+>>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
         .toList();
+  }
+
+  // Fungsi untuk cek apakah bahan ada dalam list (case insensitive)
+  bool _isBahanDihindari(String bahan, List<String> bahanList) {
+    String normalizedBahan = bahan.trim().toLowerCase();
+    return bahanList.any((item) => item.contains(normalizedBahan) || normalizedBahan.contains(item));
   }
 
   Future<void> _handleSave() async {
     setState(() => _isLoading = true);
+<<<<<<< HEAD
 
     try {
       // ✅ NORMALISASI INPUT SEBELUM SIMPAN
@@ -282,6 +343,49 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         );
       }
+=======
+    
+    // Normalisasi input bahan yang dihindari
+    _bahanDihindariList = _normalizeBahanList(_bahanDihindariController.text);
+    
+    final profileData = {
+      'nama_lengkap': _username,
+      'tanggal_lahir': _tanggalLahir?.toIso8601String().split('T')[0], // Format: YYYY-MM-DD
+      'berat_badan': double.tryParse(_berat),
+      'tinggi_badan': double.tryParse(_tinggi),
+      'riwayat_diabetes': _diabetesChecked ? 1 : 0,
+      'riwayat_kolesterol': _kolesterolChecked ? 1 : 0,
+      'riwayat_hipertensi': _hipertensiChecked ? 1 : 0, // BARU
+      'Bahan_dihindari': _bahanDihindariList.join(','), // Simpan sebagai CSV
+      'waktu_sarapan': ProfileService.timeOfDayToString(
+        _waktuSarapan.hour, 
+        _waktuSarapan.minute
+      ),
+      'waktu_siang': ProfileService.timeOfDayToString(
+        _waktuSiang.hour, 
+        _waktuSiang.minute
+      ),
+      'waktu_malam': ProfileService.timeOfDayToString(
+        _waktuMalam.hour, 
+        _waktuMalam.minute
+      ),
+      'notif_sarapan_aktif': _notifSarapan ? 1 : 0,
+      'notif_siang_aktif': _notifSiang ? 1 : 0,
+      'notif_malam_aktif': _notifMalam ? 1 : 0,
+    };
+    
+    final success = await ProfileService.saveProfile(widget.userId, profileData);
+    
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile berhasil disimpan!')),
+      );
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal menyimpan profile')),
+      );
+>>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
     }
 
     setState(() => _isLoading = false);
@@ -300,12 +404,46 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         ),
       ),
       body: SafeArea(
+<<<<<<< HEAD
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: _sidePadding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+=======
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: _sidePadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+              Text('User Profile', style: _subtitleStyle),
+              const SizedBox(height: 8),
+              Text('Hi, $_username', style: _bodyStyle),
+              const SizedBox(height: 40),
+
+              // --- DATA FISIK ---
+              Text('Data Fisik', style: _headingStyle),
+              const SizedBox(height: 16),
+              
+              // Tanggal Lahir (Ganti dari Usia)
+              _buildDateRow(
+                label: "Tanggal Lahir",
+                date: _tanggalLahir,
+                onEdit: () => _showDatePicker(),
+              ),
+              const SizedBox(height: 12),
+              
+              // Tampilkan umur (read-only, computed)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(_fieldRadius),
+                ),
+                child: Row(
+>>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
                   children: [
                     const SizedBox(height: 8),
                     Text('User Profile', style: _subtitleStyle),
@@ -512,9 +650,129 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ],
                 ),
               ),
+<<<<<<< HEAD
+=======
+              const SizedBox(height: 16),
+              
+              _buildEditableRow(
+                label: "Berat Badan", value: _berat, unit: "kg",
+                onEdit: () => _showEditDialog("Berat Badan", _berat, (val) => setState(() => _berat = val)),
+              ),
+              const SizedBox(height: 16),
+              _buildEditableRow(
+                label: "Tinggi Badan", value: _tinggi, unit: "cm",
+                onEdit: () => _showEditDialog("Tinggi Badan", _tinggi, (val) => setState(() => _tinggi = val)),
+              ),
+              const SizedBox(height: 40),
+
+              // --- RIWAYAT KESEHATAN (Tambah Hipertensi) ---
+              Text('Riwayat Kesehatan', style: _headingStyle),
+              const SizedBox(height: 16),
+              _buildCheckbox(
+                label: 'Riwayat Diabetes',
+                value: _diabetesChecked,
+                onChanged: (val) => setState(() => _diabetesChecked = val ?? false)
+              ),
+              _buildCheckbox(
+                label: 'Riwayat Kolesterol',
+                value: _kolesterolChecked,
+                onChanged: (val) => setState(() => _kolesterolChecked = val ?? false)
+              ),
+              _buildCheckbox(
+                label: 'Riwayat Hipertensi', // BARU
+                value: _hipertensiChecked,
+                onChanged: (val) => setState(() => _hipertensiChecked = val ?? false)
+              ),
+              const SizedBox(height: 40),
+
+              // --- BAHAN YANG DIHINDARI (TextField) ---
+              Text('Bahan yang Dihindari', style: _headingStyle),
+              const SizedBox(height: 8),
+              Text(
+                'Pisahkan dengan koma (,) untuk beberapa bahan',
+                style: _labelStyle.copyWith(fontSize: 14, color: Colors.grey.shade700),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _bahanDihindariController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Contoh: gluten, kacang, telur, susu',
+                  hintStyle: GoogleFonts.inter(color: Colors.grey),
+                  filled: true,
+                  fillColor: _textFieldFillColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(_fieldRadius),
+                    borderSide: const BorderSide(color: _dividerColor, width: 1),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(_fieldRadius),
+                    borderSide: const BorderSide(color: _dividerColor, width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(_fieldRadius),
+                    borderSide: const BorderSide(color: _buttonColor, width: 2),
+                  ),
+                ),
+                style: _labelStyle,
+              ),
+              const SizedBox(height: 40),
+
+              // --- JADWAL MAKAN ---
+              Text('Jadwal Makan', style: _headingStyle),
+              const SizedBox(height: 16),
+              
+              _buildNotificationRow(
+                label: "Sarapan",
+                isActive: _notifSarapan,
+                time: _waktuSarapan,
+                onSwitchChanged: (val) => setState(() => _notifSarapan = val),
+                onTimeTap: () => _selectTime(_waktuSarapan, (picked) => setState(() => _waktuSarapan = picked)),
+              ),
+              const SizedBox(height: 12),
+              
+              _buildNotificationRow(
+                label: "Makan Siang",
+                isActive: _notifSiang,
+                time: _waktuSiang,
+                onSwitchChanged: (val) => setState(() => _notifSiang = val),
+                onTimeTap: () => _selectTime(_waktuSiang, (picked) => setState(() => _waktuSiang = picked)),
+              ),
+              const SizedBox(height: 12),
+              
+              _buildNotificationRow(
+                label: "Makan Malam",
+                isActive: _notifMalam,
+                time: _waktuMalam,
+                onSwitchChanged: (val) => setState(() => _notifMalam = val),
+                onTimeTap: () => _selectTime(_waktuMalam, (picked) => setState(() => _waktuMalam = picked)),
+              ),
+
+              const SizedBox(height: 48),
+
+              // --- TOMBOL SAVE ---
+              ElevatedButton(
+                onPressed: _isLoading ? null : _handleSave,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _buttonColor,
+                  minimumSize: const Size(double.infinity, _buttonHeight),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_buttonRadius)),
+                  elevation: 0,
+                ),
+                child: _isLoading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : Text('Simpan', style: _buttonTextStyle),
+              ),
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+>>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
       ),
     );
   }
+
+  // --- WIDGET HELPER ---
 
   Widget _buildDateRow({
     required String label,
@@ -589,11 +847,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
+<<<<<<< HEAD
   Widget _buildEditableRow(
       {required String label,
       required String value,
       required String unit,
       required VoidCallback onEdit}) {
+=======
+  Widget _buildEditableRow({
+    required String label,
+    required String value,
+    required String unit,
+    required VoidCallback onEdit
+  }) {
+>>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
     return Container(
       height: _fieldHeight,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -605,6 +872,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+<<<<<<< HEAD
           Expanded(
             child: Text(
               "$label: $value $unit",
@@ -618,6 +886,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             icon: const Icon(Icons.edit, color: _textColorBlack),
             onPressed: onEdit,
           ),
+=======
+          Text("$label: $value $unit", style: _valueTextStyle),
+          IconButton(
+            icon: const Icon(Icons.edit, color: _textColorBlack),
+            onPressed: onEdit,
+          ),
+>>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
         ],
       ),
     );

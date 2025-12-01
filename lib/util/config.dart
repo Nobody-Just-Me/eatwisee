@@ -9,7 +9,7 @@ class AppConfig {
       true; // true = HP Fisik, false = Emulator/Simulator
 
   // IP Laptop kamu (untuk HP fisik)
-  static const String laptopIP = '172.24.121.28';
+  static const String laptopIP = '192.168.1.140'; // ← UDAH DIGANTI
 
   // ============================================
   // BASE URL (Otomatis sesuai device)
@@ -17,7 +17,7 @@ class AppConfig {
   static String get baseUrl {
     // Kalau pakai HP fisik
     if (usePhysicalDevice) {
-      return 'http://$laptopIP/eatwise2/eatwise2'; // ← INI YANG DIGANTI
+      return 'http://$laptopIP/eatwise2/eatwise2'; // ← Sekarang jadi 192.168.1.140
     }
 
     // Kalau Web (Chrome)

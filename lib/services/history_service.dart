@@ -5,12 +5,73 @@ import 'package:eatwise2/services/api_helper.dart';
 
 class HistoryService {
   // ============================================
+  // ADD FOOD TO TRACKING (AI Detection)
+  // ============================================
+  static Future<Map<String, dynamic>?> addFoodToHistory({
+    required int userId,
+    required String foodName,
+    required int kalori,
+    double protein = 0,
+    double carbs = 0,
+    double fat = 0,
+    double fiber = 0,
+    String? servingSize,
+    String? imagePath,
+  }) async {
+    try {
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      print('📡 ADD FOOD TO TRACKING');
+      print('🔗 URL: ${AppConfig.baseUrl}/history_makanan.php');
+      print('👤 User ID: $userId');
+      print('🍽️ Food: $foodName');
+      print('🔥 Kalori: $kalori');
+
+      final response = await http.post(
+        Uri.parse('${AppConfig.baseUrl}/history_makanan.php'),
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({
+          'user_id': userId,
+          'food_name': foodName,
+          'kalori': kalori,
+          'protein': protein,
+          'carbs': carbs,
+          'fat': fat,
+          'fiber': fiber,
+          'serving_size': servingSize,
+          'image_path': imagePath,
+        }),
+      );
+
+      print('📥 Response Status: ${response.statusCode}');
+      print('📦 Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['success'] == true) {
+          print('✅ Berhasil ditambahkan ke tracking');
+          print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          return jsonData;
+        }
+      }
+
+      print('❌ Gagal menambahkan: ${response.body}');
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      return null;
+    } catch (e) {
+      print('❌ Error adding food to history: $e');
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      return null;
+    }
+  }
+
+  // ============================================
   // GET TODAY'S HISTORY
   // ============================================
   static Future<Map<String, dynamic>?> getTodayHistory(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/history.php?today=1&user_id=$userId'),
+        Uri.parse(
+            '${AppConfig.baseUrl}/history_makanan.php?today=1&user_id=$userId'),
         headers: {"Content-Type": "application/json"},
       );
 
@@ -19,24 +80,20 @@ class HistoryService {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData['success'] == true) {
-          // Parse setiap history item dengan ApiHelper
-          if (jsonData['data'] != null) {
-            final historyItems = (jsonData['data'] as List)
-                .map((item) => ApiHelper.parseHistoryData(item))
-                .toList();
-            
-            jsonData['data'] = historyItems;
-          }
-          
+          // Return raw data - tidak perlu parsing karena field sudah sesuai
+          // Data dari history_makanan: food_name, kalori, protein, carbs, fat, serving_size
+
           // Parse summary dengan safe parsing
           if (jsonData['summary'] != null) {
             jsonData['summary'] = {
-              'total_items': ApiHelper.parseIntWithDefault(jsonData['summary']['total_items'], 0),
-              'total_kalori': ApiHelper.parseIntWithDefault(jsonData['summary']['total_kalori'], 0),
+              'total_items': ApiHelper.parseIntWithDefault(
+                  jsonData['summary']['total_items'], 0),
+              'total_kalori': ApiHelper.parseIntWithDefault(
+                  jsonData['summary']['total_kalori'], 0),
               'tanggal': ApiHelper.parseString(jsonData['summary']['tanggal']),
             };
           }
-          
+
           return jsonData;
         }
       }
@@ -59,8 +116,9 @@ class HistoryService {
     int limit = 50,
   }) async {
     try {
-      String url = '${AppConfig.baseUrl}/history.php?user_id=$userId&page=$page&limit=$limit';
-      
+      String url =
+          '${AppConfig.baseUrl}/history_makanan.php?user_id=$userId&page=$page&limit=$limit';
+
       if (startDate != null) {
         url += '&start_date=$startDate';
       }
@@ -78,38 +136,37 @@ class HistoryService {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData['success'] == true) {
-          // Parse history items
-          if (jsonData['data'] != null) {
-            final historyItems = (jsonData['data'] as List)
-                .map((item) => ApiHelper.parseHistoryData(item))
-                .toList();
-            
-            jsonData['data'] = historyItems;
-          }
-          
+          // Return raw data - tidak perlu parsing karena field sudah sesuai
+
           // Parse summary by date
           if (jsonData['summary_by_date'] != null) {
             final summaries = (jsonData['summary_by_date'] as List)
                 .map((summary) => {
-                  'tanggal': ApiHelper.parseString(summary['tanggal']),
-                  'total_items': ApiHelper.parseIntWithDefault(summary['total_items'], 0),
-                  'total_kalori': ApiHelper.parseIntWithDefault(summary['total_kalori'], 0),
-                })
+                      'tanggal': ApiHelper.parseString(summary['tanggal']),
+                      'total_items': ApiHelper.parseIntWithDefault(
+                          summary['total_items'], 0),
+                      'total_kalori': ApiHelper.parseIntWithDefault(
+                          summary['total_kalori'], 0),
+                    })
                 .toList();
-            
+
             jsonData['summary_by_date'] = summaries;
           }
-          
+
           // Parse pagination
           if (jsonData['pagination'] != null) {
             jsonData['pagination'] = {
-              'page': ApiHelper.parseIntWithDefault(jsonData['pagination']['page'], 1),
-              'limit': ApiHelper.parseIntWithDefault(jsonData['pagination']['limit'], 50),
-              'total': ApiHelper.parseIntWithDefault(jsonData['pagination']['total'], 0),
-              'total_pages': ApiHelper.parseIntWithDefault(jsonData['pagination']['total_pages'], 1),
+              'page': ApiHelper.parseIntWithDefault(
+                  jsonData['pagination']['page'], 1),
+              'limit': ApiHelper.parseIntWithDefault(
+                  jsonData['pagination']['limit'], 50),
+              'total': ApiHelper.parseIntWithDefault(
+                  jsonData['pagination']['total'], 0),
+              'total_pages': ApiHelper.parseIntWithDefault(
+                  jsonData['pagination']['total_pages'], 1),
             };
           }
-          
+
           return jsonData;
         }
       }
@@ -128,9 +185,9 @@ class HistoryService {
     try {
       final request = http.Request(
         'DELETE',
-        Uri.parse('${AppConfig.baseUrl}/history.php'),
+        Uri.parse('${AppConfig.baseUrl}/history_makanan.php'),
       );
-      
+
       request.headers['Content-Type'] = 'application/json';
       request.body = json.encode({
         'history_id': historyId,
@@ -157,13 +214,16 @@ class HistoryService {
   // ============================================
   // GET WEEKLY SUMMARY
   // ============================================
-  static Future<List<Map<String, dynamic>>?> getWeeklySummary(int userId) async {
+  static Future<List<Map<String, dynamic>>?> getWeeklySummary(
+      int userId) async {
     try {
       final today = DateTime.now();
       final sevenDaysAgo = today.subtract(const Duration(days: 7));
-      
-      final startDate = '${sevenDaysAgo.year}-${sevenDaysAgo.month.toString().padLeft(2, '0')}-${sevenDaysAgo.day.toString().padLeft(2, '0')}';
-      final endDate = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+      final startDate =
+          '${sevenDaysAgo.year}-${sevenDaysAgo.month.toString().padLeft(2, '0')}-${sevenDaysAgo.day.toString().padLeft(2, '0')}';
+      final endDate =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 
       final result = await getHistory(
         userId: userId,

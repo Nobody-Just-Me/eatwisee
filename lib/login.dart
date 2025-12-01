@@ -163,13 +163,22 @@ class _LoginPageState extends State<LoginPage> {
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
+        print('✅ Login response data: $jsonData');
         if (jsonData['user'] != null) {
           var userData = jsonData['user'];
+          print('👤 User data: $userData');
+          print('🆔 User ID: ${userData['id']}');
+
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool(IS_LOGIN, true);
-          await prefs.setString('user_id', userData['id'].toString());
+          await prefs.setInt(
+              'userId',
+              int.parse(userData['id']
+                  .toString())); // ✅ FIX: Simpan sebagai int dengan key 'userId'
           await prefs.setString('username', userData['username'] ?? 'User');
           await prefs.setString('email', userData['email'] ?? '');
+
+          print('💾 Saved userId to SharedPreferences: ${userData['id']}');
 
           createUserSessionx(
             userData['id']?.toString() ?? "",

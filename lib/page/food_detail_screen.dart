@@ -1,23 +1,151 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:eatwise2/models/food_model.dart';
+import 'package:eatwise2/services/history_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class FoodDetailScreen extends StatelessWidget {
+class FoodDetailScreen extends StatefulWidget {
   final FoodModel food;
+  final String? imagePath;
 
-  const FoodDetailScreen({Key? key, required this.food}) : super(key: key);
+  const FoodDetailScreen({Key? key, required this.food, this.imagePath})
+      : super(key: key);
 
+  @override
+  State<FoodDetailScreen> createState() => _FoodDetailScreenState();
+}
+
+class _FoodDetailScreenState extends State<FoodDetailScreen> {
   static const Color brandGreen = Color(0xFF13721C);
   static const Color bgColor = Color.fromARGB(255, 170, 184, 171);
   static const Color cardColor = Color.fromARGB(255, 230, 238, 230);
+
+  bool isAddingToTracking = false;
+
+  Future<void> _addToTracking() async {
+    setState(() {
+      isAddingToTracking = true;
+    });
+
+    try {
+      // Get user ID dari SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('userId');
+
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      print('🔍 Checking userId from SharedPreferences...');
+      print('📦 All keys in SharedPreferences: ${prefs.getKeys()}');
+      print('🆔 userId value: $userId');
+
+      if (userId == null) {
+        print('❌ userId is NULL!');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Error: User tidak terautentikasi. Silakan login ulang.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      print('🎯 Menambahkan ${widget.food.name} ke tracking');
+      print('👤 User ID: $userId');
+
+      // Panggil API untuk save ke MySQL
+      final result = await HistoryService.addFoodToHistory(
+        userId: userId,
+        foodName: widget.food.name,
+        kalori: widget.food.calories,
+        protein: widget.food.protein,
+        carbs: widget.food.carbs,
+        fat: widget.food.fat,
+        fiber: widget.food.fiber,
+        servingSize: widget.food.servingSize,
+        imagePath: widget.imagePath,
+      );
+
+      if (mounted) {
+        if (result != null && result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '✅ ${widget.food.name} ditambahkan ke tracking harian!',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
+              backgroundColor: brandGreen,
+              duration: const Duration(seconds: 3),
+              action: SnackBarAction(
+                label: 'OK',
+                textColor: Colors.white,
+                onPressed: () {},
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Gagal menambahkan ke tracking',
+                style: GoogleFonts.inter(),
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isAddingToTracking = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: isAddingToTracking ? null : _addToTracking,
+        backgroundColor: isAddingToTracking ? Colors.grey : brandGreen,
+        icon: isAddingToTracking
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Icon(Icons.add_circle, color: Colors.white),
+        label: Text(
+          isAddingToTracking ? 'Menyimpan...' : 'Tambah ke Tracking',
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+      ),
       appBar: AppBar(
         title: Text(
-          food.name,
+          widget.food.name,
           style: GoogleFonts.padauk(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -63,7 +191,7 @@ class FoodDetailScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            food.description,
+            widget.food.description,
             style: GoogleFonts.inter(fontSize: 14, height: 1.5),
           ),
           const SizedBox(height: 12),
@@ -72,7 +200,7 @@ class FoodDetailScreen extends StatelessWidget {
               const Icon(Icons.access_time, size: 18, color: brandGreen),
               const SizedBox(width: 8),
               Text(
-                'Waktu Persiapan: ${food.preparationTime}',
+                'Waktu Persiapan: ${widget.food.preparationTime}',
                 style: GoogleFonts.inter(
                     fontSize: 13, fontWeight: FontWeight.w600),
               ),
@@ -84,7 +212,7 @@ class FoodDetailScreen extends StatelessWidget {
               const Icon(Icons.scale, size: 18, color: brandGreen),
               const SizedBox(width: 8),
               Text(
-                'Porsi: ${food.servingSize}',
+                'Porsi: ${widget.food.servingSize}',
                 style: GoogleFonts.inter(
                     fontSize: 13, fontWeight: FontWeight.w600),
               ),
@@ -103,7 +231,7 @@ class FoodDetailScreen extends StatelessWidget {
         children: [
           _buildNutritionRow(
             'Kalori',
-            '${food.calories}',
+            '${widget.food.calories}',
             'kkal',
             Colors.red,
             Icons.local_fire_department,
@@ -111,7 +239,7 @@ class FoodDetailScreen extends StatelessWidget {
           const Divider(height: 20),
           _buildNutritionRow(
             'Protein',
-            food.protein.toStringAsFixed(1),
+            widget.food.protein.toStringAsFixed(1),
             'g',
             Colors.blue,
             Icons.fitness_center,
@@ -119,7 +247,7 @@ class FoodDetailScreen extends StatelessWidget {
           const Divider(height: 20),
           _buildNutritionRow(
             'Karbohidrat',
-            food.carbs.toStringAsFixed(1),
+            widget.food.carbs.toStringAsFixed(1),
             'g',
             Colors.orange,
             Icons.bakery_dining,
@@ -127,7 +255,7 @@ class FoodDetailScreen extends StatelessWidget {
           const Divider(height: 20),
           _buildNutritionRow(
             'Lemak',
-            food.fat.toStringAsFixed(1),
+            widget.food.fat.toStringAsFixed(1),
             'g',
             Colors.amber,
             Icons.opacity,
@@ -135,7 +263,7 @@ class FoodDetailScreen extends StatelessWidget {
           const Divider(height: 20),
           _buildNutritionRow(
             'Serat',
-            food.fiber.toStringAsFixed(1),
+            widget.food.fiber.toStringAsFixed(1),
             'g',
             Colors.green,
             Icons.grass,
@@ -151,11 +279,12 @@ class FoodDetailScreen extends StatelessWidget {
       icon: Icons.pie_chart,
       child: Column(
         children: [
-          _buildMacroBar('Protein', food.proteinPercentage, Colors.blue),
+          _buildMacroBar('Protein', widget.food.proteinPercentage, Colors.blue),
           const SizedBox(height: 12),
-          _buildMacroBar('Karbohidrat', food.carbsPercentage, Colors.orange),
+          _buildMacroBar(
+              'Karbohidrat', widget.food.carbsPercentage, Colors.orange),
           const SizedBox(height: 12),
-          _buildMacroBar('Lemak', food.fatPercentage, Colors.amber),
+          _buildMacroBar('Lemak', widget.food.fatPercentage, Colors.amber),
           const SizedBox(height: 16),
           _buildNutritionTags(),
         ],
@@ -168,7 +297,7 @@ class FoodDetailScreen extends StatelessWidget {
       title: 'Manfaat Kesehatan',
       icon: Icons.favorite,
       child: Text(
-        food.healthBenefits,
+        widget.food.healthBenefits,
         style: GoogleFonts.inter(fontSize: 14, height: 1.6),
       ),
     );
@@ -179,7 +308,7 @@ class FoodDetailScreen extends StatelessWidget {
       title: 'Bahan-Bahan Utama',
       icon: Icons.shopping_basket,
       child: Text(
-        food.ingredients,
+        widget.food.ingredients,
         style: GoogleFonts.inter(fontSize: 14, height: 1.6),
       ),
     );
@@ -203,7 +332,7 @@ class FoodDetailScreen extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                food.tips,
+                widget.food.tips,
                 style: GoogleFonts.inter(fontSize: 13, height: 1.6),
               ),
             ),
@@ -231,7 +360,7 @@ class FoodDetailScreen extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                food.allergens,
+                widget.food.allergens,
                 style: GoogleFonts.inter(
                     fontSize: 13, height: 1.6, fontWeight: FontWeight.w500),
               ),
@@ -259,7 +388,7 @@ class FoodDetailScreen extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                food.recommendedFor,
+                widget.food.recommendedFor,
                 style: GoogleFonts.inter(
                     fontSize: 13, fontWeight: FontWeight.w600),
               ),
@@ -380,16 +509,16 @@ class FoodDetailScreen extends StatelessWidget {
   Widget _buildNutritionTags() {
     List<Widget> tags = [];
 
-    if (food.isHighProtein) {
+    if (widget.food.isHighProtein) {
       tags.add(_buildTag('Tinggi Protein', Colors.blue));
     }
-    if (food.isLowCarb) {
+    if (widget.food.isLowCarb) {
       tags.add(_buildTag('Rendah Karbo', Colors.orange));
     }
-    if (food.isLowFat) {
+    if (widget.food.isLowFat) {
       tags.add(_buildTag('Rendah Lemak', Colors.amber));
     }
-    if (food.calories < 400) {
+    if (widget.food.calories < 400) {
       tags.add(_buildTag('Rendah Kalori', Colors.green));
     }
 

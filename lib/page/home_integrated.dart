@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
+import 'dart:io';
 import 'package:eatwise2/page/user_profile.dart';
 import 'package:eatwise2/page/scan_page.dart';
 import 'package:eatwise2/page/food_detection_screen.dart';
@@ -118,15 +119,22 @@ class _HomeContentState extends State<HomeContent> {
         // Profile ditemukan
         setState(() {
           _userName = profile['nama_lengkap'] ?? profile['username'] ?? 'User';
-          _currentCalories = profile['kalori_terkonsumsi_hari_ini'] ?? 0;
           _targetCalories = profile['target_kalori_harian'] ?? 2000;
-          _calorieProgress =
-              (_currentCalories / _targetCalories).clamp(0.0, 1.0);
         });
       } else {
         // Profile belum ada, buat default
         setState(() {
-          _userName = prefs.getString('username') ?? 'AHok';
+          _userName = prefs.getString('username') ?? 'User';
+        });
+      }
+
+      // Load kalori hari ini dari history_makanan
+      final historyResult = await HistoryService.getTodayHistory(userId);
+      if (historyResult != null) {
+        setState(() {
+          _currentCalories = historyResult['summary']['total_kalori'] ?? 0;
+          _calorieProgress =
+              (_currentCalories / _targetCalories).clamp(0.0, 1.0);
         });
       }
     } catch (e) {
@@ -529,13 +537,25 @@ class _FoodHistoryScreenState extends State<FoodHistoryScreen> {
 
                       final item = _historyItems[index - 1];
                       return ListTile(
-                        leading: item['image_url'] != null
-                            ? Image.network(item['image_url'],
-                                width: 50, height: 50, fit: BoxFit.cover)
-                            : const Icon(Icons.fastfood),
-                        title: Text(item['nama_produk'] ?? 'Unknown'),
+                        leading: item['image_path'] != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.file(
+                                  File(item['image_path']),
+                                  width: 50,
+                                  height: 50,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(Icons.fastfood,
+                                        size: 40, color: Colors.green);
+                                  },
+                                ),
+                              )
+                            : const Icon(Icons.fastfood,
+                                size: 40, color: Colors.green),
+                        title: Text(item['food_name'] ?? 'Unknown'),
                         subtitle: Text(
-                            '${item['kalori_dikonsumsi']} kal • ${item['waktu']}'),
+                            '${item['kalori']} kal • ${item['serving_size'] ?? '1 porsi'}'),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () async {

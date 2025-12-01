@@ -469,8 +469,10 @@ class _FoodDetectionScreenState extends State<FoodDetectionScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          FoodDetailScreen(food: detectedFood!),
+                      builder: (context) => FoodDetailScreen(
+                        food: detectedFood!,
+                        imagePath: selectedImage?.path,
+                      ),
                     ),
                   );
                 },

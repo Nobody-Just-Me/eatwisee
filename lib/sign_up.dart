@@ -72,7 +72,7 @@ class _SignUpPageState extends State<SignUpPage> {
               TextFormField(
                 controller: usernameCont,
                 decoration: const InputDecoration(
-                    icon: Icon(Icons.person), hintText: 'username Lengkap'),
+                    icon: Icon(Icons.person), hintText: 'Username'),
               ),
               const SizedBox(height: 24),
               TextFormField(

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
 import 'package:eatwise2/page/user_profile.dart';
 import 'package:eatwise2/page/scan_page.dart';
+import 'package:eatwise2/page/food_detection_screen.dart';
 import 'package:eatwise2/services/profile_service_fixed.dart';
 import 'package:eatwise2/services/history_service.dart';
 import 'package:eatwise2/util/session.dart';
@@ -101,7 +102,7 @@ class _HomeContentState extends State<HomeContent> {
       final prefs = await SharedPreferences.getInstance();
       String? uIdString = prefs.getString('user_id');
       final userId = int.tryParse(uIdString ?? '');
-      
+
       if (userId == null) {
         // User belum login, redirect ke login
         Navigator.pushReplacementNamed(context, '/login');
@@ -110,17 +111,17 @@ class _HomeContentState extends State<HomeContent> {
 
       setState(() => _userId = userId);
 
-
       // Load profile
       final profile = await ProfileService.getProfile(userId);
-      
+
       if (profile != null) {
         // Profile ditemukan
         setState(() {
           _userName = profile['nama_lengkap'] ?? profile['username'] ?? 'User';
           _currentCalories = profile['kalori_terkonsumsi_hari_ini'] ?? 0;
           _targetCalories = profile['target_kalori_harian'] ?? 2000;
-          _calorieProgress = (_currentCalories / _targetCalories).clamp(0.0, 1.0);
+          _calorieProgress =
+              (_currentCalories / _targetCalories).clamp(0.0, 1.0);
         });
       } else {
         // Profile belum ada, buat default
@@ -162,7 +163,8 @@ class _HomeContentState extends State<HomeContent> {
             children: [
               _buildHeader(),
               Padding(
-                padding: const EdgeInsets.fromLTRB(_sidePadding, 30, _sidePadding, 20),
+                padding: const EdgeInsets.fromLTRB(
+                    _sidePadding, 30, _sidePadding, 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -175,12 +177,14 @@ class _HomeContentState extends State<HomeContent> {
                         icon: Icons.person_outline_sharp,
                         iconColor: _antiDesignAccentColor,
                         label: 'Profil',
-                        labelStyle: _cardTextStyle.copyWith(color: _antiDesignAccentColor),
+                        labelStyle: _cardTextStyle.copyWith(
+                            color: _antiDesignAccentColor),
                         onTap: () async {
                           final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => UserProfileScreen(userId: _userId!),
+                              builder: (context) =>
+                                  UserProfileScreen(userId: _userId!),
                             ),
                           );
                           // Reload data setelah kembali dari profile
@@ -204,9 +208,33 @@ class _HomeContentState extends State<HomeContent> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => FoodHistoryScreen(userId: _userId!),
+                              builder: (context) =>
+                                  FoodHistoryScreen(userId: _userId!),
                             ),
                           ).then((_) => _loadData());
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    // AI Food Detection Card
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildClickableCard(
+                        context: context,
+                        widthFactor: 0.9,
+                        height: 180,
+                        icon: Icons.camera_alt,
+                        iconColor: _brandColorGreen,
+                        label: 'AI Deteksi Makanan',
+                        labelStyle:
+                            _cardTextStyle.copyWith(color: _brandColorGreen),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const FoodDetectionScreen(),
+                            ),
+                          );
                         },
                       ),
                     ),
@@ -332,7 +360,8 @@ class _HomeContentState extends State<HomeContent> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text('$calorieValue', style: _calorieNumStyle),
-                  Text('/ $targetCalorie kal', style: _calorieLabelStyle.copyWith(fontSize: 20)),
+                  Text('/ $targetCalorie kal',
+                      style: _calorieLabelStyle.copyWith(fontSize: 20)),
                 ],
               ),
               SizedBox(
@@ -417,7 +446,8 @@ class _HomeContentState extends State<HomeContent> {
       child: Center(
         child: Text(
           'EATWISE 2025',
-          style: _subtitleStyle.copyWith(fontSize: 25, fontWeight: FontWeight.w500),
+          style: _subtitleStyle.copyWith(
+              fontSize: 25, fontWeight: FontWeight.w500),
         ),
       ),
     );
@@ -429,7 +459,7 @@ class _HomeContentState extends State<HomeContent> {
 // ============================================
 class FoodHistoryScreen extends StatefulWidget {
   final int userId;
-  
+
   const FoodHistoryScreen({Key? key, required this.userId}) : super(key: key);
 
   @override
@@ -452,7 +482,7 @@ class _FoodHistoryScreenState extends State<FoodHistoryScreen> {
 
     try {
       final result = await HistoryService.getTodayHistory(widget.userId);
-      
+
       if (result != null) {
         setState(() {
           _historyItems = result['data'] ?? [];
@@ -471,12 +501,13 @@ class _FoodHistoryScreenState extends State<FoodHistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Riwayat Makanan Hari Ini'),
-        backgroundColor:  Color.fromARGB(255, 170, 184, 171),  
+        backgroundColor: Color.fromARGB(255, 170, 184, 171),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _historyItems.isEmpty
-              ? const Center(child: Text('Belum ada makanan yang dikonsumsi hari ini'))
+              ? const Center(
+                  child: Text('Belum ada makanan yang dikonsumsi hari ini'))
               : RefreshIndicator(
                   onRefresh: _loadHistory,
                   child: ListView.builder(
@@ -495,14 +526,16 @@ class _FoodHistoryScreenState extends State<FoodHistoryScreen> {
                           ),
                         );
                       }
-                      
+
                       final item = _historyItems[index - 1];
                       return ListTile(
                         leading: item['image_url'] != null
-                            ? Image.network(item['image_url'], width: 50, height: 50, fit: BoxFit.cover)
+                            ? Image.network(item['image_url'],
+                                width: 50, height: 50, fit: BoxFit.cover)
                             : const Icon(Icons.fastfood),
                         title: Text(item['nama_produk'] ?? 'Unknown'),
-                        subtitle: Text('${item['kalori_dikonsumsi']} kal • ${item['waktu']}'),
+                        subtitle: Text(
+                            '${item['kalori_dikonsumsi']} kal • ${item['waktu']}'),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () async {
@@ -510,30 +543,35 @@ class _FoodHistoryScreenState extends State<FoodHistoryScreen> {
                               context: context,
                               builder: (context) => AlertDialog(
                                 title: const Text('Hapus Item'),
-                                content: const Text('Yakin ingin menghapus item ini?'),
+                                content: const Text(
+                                    'Yakin ingin menghapus item ini?'),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => Navigator.pop(context, false),
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
                                     child: const Text('Batal'),
                                   ),
                                   TextButton(
-                                    onPressed: () => Navigator.pop(context, true),
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
                                     child: const Text('Hapus'),
                                   ),
                                 ],
                               ),
                             );
-                            
+
                             if (confirm == true) {
-                              final success = await HistoryService.deleteHistoryItem(
+                              final success =
+                                  await HistoryService.deleteHistoryItem(
                                 item['id'],
                                 widget.userId,
                               );
-                              
+
                               if (success) {
                                 _loadHistory();
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Item berhasil dihapus')),
+                                  const SnackBar(
+                                      content: Text('Item berhasil dihapus')),
                                 );
                               }
                             }

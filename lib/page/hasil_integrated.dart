@@ -158,8 +158,10 @@ Map<String, dynamic> _performClientSideAnalysis(
       komposisiProduk = List<String>.from(product['komposisi_array']);
     }
 
-    // --- 1. LOGIKA DETEKSI BAHAN DIHINDARI ---
-    String userPantanganInput = profile['bahan_dihindari'] ?? ""; 
+    // // --- 1. LOGIKA DETEKSI BAHAN DIHINDARI ---
+    String userPantanganInput = profile['Bahan_dihindari'] ?? ""; 
+    print(  'User Pantangan Input: $userPantanganInput' 
+    );
     
     List<String> bahanTerlarangDitemukan = IngredientChecker.check(
       komposisiProduk, 
@@ -191,7 +193,7 @@ Map<String, dynamic> _performClientSideAnalysis(
       peringatanAlergi.add('⚠️ MENGANDUNG SUSU');
     }
 
-    // ... (Sisa kode Peringatan Penyakit tetap sama) ...
+    
 
     return {
       'status_aman': statusAman,
@@ -364,7 +366,7 @@ Map<String, dynamic> _performClientSideAnalysis(
                   // Peringatan alergi
                   if (_analysis != null && _analysis!['bahan_terlarang_ditemukan'].isNotEmpty) ...[
                     
-
+                    
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(

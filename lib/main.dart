@@ -4,7 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eatwise2/util/session.dart';
 import 'package:eatwise2/login.dart';
 import 'package:eatwise2/page/home_integrated.dart';
-import 'package:eatwise2/page/hasil_integrated.dart';  
+import 'package:eatwise2/page/hasil_integrated.dart'; 
+import 'package:eatwise2/page/user_profile.dart'; 
 
 
 void main() async {
@@ -45,7 +46,9 @@ class _MyAppState extends State<MyApp> {
             if (prefs.getBool(IS_LOGIN) ?? false) {
                   int idproduk = 11;
                   // result = const HomeContent(); 
-                  result = const ReportScreenApi(productId: 11,);// Gunakan HomeContent baru
+                  // result = const ReportScreenApi(productId: 11,);
+                  //// Gunakan HomeContent baru
+                  result = const UserProfileScreen(userId: 3,);
                 } else {
                  result = LoginPage();
                 }

@@ -154,7 +154,7 @@ class ApiHelper {
       'target_kalori_harian': parseIntWithDefault(raw['target_kalori_harian'], 2000),
       'kalori_terkonsumsi_hari_ini': parseIntWithDefault(raw['kalori_terkonsumsi_hari_ini'], 0),
       'tanggal_reset_kalori': parseString(raw['tanggal_reset_kalori']),
-      'bahan_dihindari': parseString(raw['bahan_dihindari'])
+      'Bahan_dihindari': parseString(raw['Bahan_dihindari']),
     };
   }
 

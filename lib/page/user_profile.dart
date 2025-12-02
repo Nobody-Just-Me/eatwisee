@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:eatwise2/services/profile_service_fixed.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart'; // Tambahkan di pubspec.yaml: intl: ^0.18.0
 
 class UserProfileScreen extends StatefulWidget {
   final int userId;
@@ -51,20 +50,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   static const double _buttonRadius = 10.0;
 
   // --- STATE DATA FISIK ---
-  DateTime? _tanggalLahir;
-  int _usia = 0;
+  DateTime? _tanggalLahir; // Ganti dari String _usia
+  int _usia = 0; // Computed dari tanggal lahir
   String _berat = "65.5";   
   String _tinggi = "175";   
   String _username = "User";
 
-  // --- State Checkbox Riwayat Kesehatan ---
+  // --- State Checkbox Riwayat Kesehatan (Tambah Hipertensi) ---
   bool _diabetesChecked = false;
   bool _kolesterolChecked = false;
-  bool _hipertensiChecked = false;
+  bool _hipertensiChecked = false; // BARU
 
-  // --- STATE BARU: Bahan yang Dihindari ---
+  // --- STATE BARU: Bahan yang Dihindari (Gunakan TextField) ---
   final TextEditingController _bahanDihindariController = TextEditingController();
-  List<String> _bahanDihindariList = [];
+  List<String> _bahanDihindariList = []; // List bahan yang sudah dinormalisasi
 
   // --- STATE NOTIFIKASI MAKAN ---
   bool _notifSarapan = true;
@@ -77,7 +76,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUsername();
     _loadProfile();
   }
 
@@ -87,14 +85,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _loadUsername() async {
-    final prefs = await SharedPreferences.getInstance();
-    String loadedUsername = prefs.getString('username') ?? 'User';
-    setState(() {
-      _username = loadedUsername;
-    });
-  }
-
   Future<void> _loadProfile() async {
     setState(() => _isLoading = true);
     
@@ -102,6 +92,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     
     if (profile != null) {
       setState(() {
+        // Load tanggal lahir dan hitung umur
         _tanggalLahir = ProfileService.parseBirthDate(profile['tanggal_lahir']);
         if (_tanggalLahir != null) {
           _usia = ProfileService.calculateAge(_tanggalLahir!);
@@ -111,13 +102,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _tinggi = profile['tinggi_badan']?.toString() ?? "175";
         _diabetesChecked = profile['riwayat_diabetes'] == 1;
         _kolesterolChecked = profile['riwayat_kolesterol'] == 1;
-        _hipertensiChecked = profile['riwayat_hipertensi'] == 1;
+        _hipertensiChecked = profile['riwayat_hipertensi'] == 1; // BARU
+        _username = profile['nama_lengkap']?.toString() ?? "User";
         
-        if (profile['bahan_dihindari'] != null && profile['bahan_dihindari'].isNotEmpty) {
-          _bahanDihindariList = _normalizeBahanList(profile['bahan_dihindari']);
+        // Load bahan yang dihindari
+        if (profile['Bahan_dihindari'] != null && profile['Bahan_dihindari'].isNotEmpty) {
+          _bahanDihindariList = _normalizeBahanList(profile['Bahan_dihindari']);
           _bahanDihindariController.text = _bahanDihindariList.join(', ');
         }
         
+        // Load waktu notifikasi jika ada
         if (profile['waktu_sarapan'] != null) {
           _waktuSarapan = _parseTimeString(profile['waktu_sarapan']);
         }
@@ -137,6 +131,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     setState(() => _isLoading = false);
   }
 
+  // Helper untuk parse string waktu "HH:mm:ss" ke TimeOfDay
   TimeOfDay _parseTimeString(String timeString) {
     try {
       final parts = timeString.split(':');
@@ -149,29 +144,37 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
+  // Normalisasi list bahan (lowercase, trim, remove duplicates)
   List<String> _normalizeBahanList(String input) {
     return input
         .split(',')
         .map((e) => e.trim().toLowerCase())
         .where((e) => e.isNotEmpty)
-        .toSet()
+        .toSet() // Remove duplicates
         .toList();
+  }
+
+  // Fungsi untuk cek apakah bahan ada dalam list (case insensitive)
+  bool _isBahanDihindari(String bahan, List<String> bahanList) {
+    String normalizedBahan = bahan.trim().toLowerCase();
+    return bahanList.any((item) => item.contains(normalizedBahan) || normalizedBahan.contains(item));
   }
 
   Future<void> _handleSave() async {
     setState(() => _isLoading = true);
     
+    // Normalisasi input bahan yang dihindari
     _bahanDihindariList = _normalizeBahanList(_bahanDihindariController.text);
     
     final profileData = {
       'nama_lengkap': _username,
-      'tanggal_lahir': _tanggalLahir?.toIso8601String().split('T')[0],
+      'tanggal_lahir': _tanggalLahir?.toIso8601String().split('T')[0], // Format: YYYY-MM-DD
       'berat_badan': double.tryParse(_berat),
       'tinggi_badan': double.tryParse(_tinggi),
       'riwayat_diabetes': _diabetesChecked ? 1 : 0,
       'riwayat_kolesterol': _kolesterolChecked ? 1 : 0,
-      'riwayat_hipertensi': _hipertensiChecked ? 1 : 0,
-      'bahan_dihindari': _bahanDihindariList.join(','),
+      'riwayat_hipertensi': _hipertensiChecked ? 1 : 0, // BARU
+      'Bahan_dihindari': _bahanDihindariList.join(','), // Simpan sebagai CSV
       'waktu_sarapan': ProfileService.timeOfDayToString(
         _waktuSarapan.hour, 
         _waktuSarapan.minute
@@ -229,9 +232,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               Text('Hi, $_username', style: _bodyStyle),
               const SizedBox(height: 40),
 
+              // --- DATA FISIK ---
               Text('Data Fisik', style: _headingStyle),
               const SizedBox(height: 16),
               
+              // Tanggal Lahir (Ganti dari Usia)
               _buildDateRow(
                 label: "Tanggal Lahir",
                 date: _tanggalLahir,
@@ -239,6 +244,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
               const SizedBox(height: 12),
               
+              // Tampilkan umur (read-only, computed)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
@@ -269,6 +275,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
               const SizedBox(height: 40),
 
+              // --- RIWAYAT KESEHATAN (Tambah Hipertensi) ---
               Text('Riwayat Kesehatan', style: _headingStyle),
               const SizedBox(height: 16),
               _buildCheckbox(
@@ -282,12 +289,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 onChanged: (val) => setState(() => _kolesterolChecked = val ?? false)
               ),
               _buildCheckbox(
-                label: 'Riwayat Hipertensi',
+                label: 'Riwayat Hipertensi', // BARU
                 value: _hipertensiChecked,
                 onChanged: (val) => setState(() => _hipertensiChecked = val ?? false)
               ),
               const SizedBox(height: 40),
 
+              // --- BAHAN YANG DIHINDARI (TextField) ---
               Text('Bahan yang Dihindari', style: _headingStyle),
               const SizedBox(height: 8),
               Text(
@@ -320,6 +328,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
               const SizedBox(height: 40),
 
+              // --- JADWAL MAKAN ---
               Text('Jadwal Makan', style: _headingStyle),
               const SizedBox(height: 16),
               
@@ -351,6 +360,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
               const SizedBox(height: 48),
 
+              // --- TOMBOL SAVE ---
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleSave,
                 style: ElevatedButton.styleFrom(
@@ -370,6 +380,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
     );
   }
+
+  // --- WIDGET HELPER ---
 
   Widget _buildDateRow({
     required String label,
@@ -436,45 +448,32 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-Widget _buildEditableRow({
-  required String label,
-  required String value,
-  required String unit,
-  required VoidCallback onEdit
-}) {
-  return Container(
-    height: _fieldHeight,
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    decoration: BoxDecoration(
-      color: _textFieldFillColor,
-      borderRadius: BorderRadius.circular(_fieldRadius),
-      border: Border.all(width: 1.0, color: _dividerColor),
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        // BERIKUT PERBAIKANNYA:
-        // Gunakan Expanded agar Text menyesuaikan ruang sisa
-        Expanded(
-          child: Text(
-            "$label: $value $unit", 
-            style: _valueTextStyle,
-            overflow: TextOverflow.ellipsis, // Tambahkan titik-titik (...) jika masih kepanjangan
-            maxLines: 1, // Pastikan hanya 1 baris agar rapi
+  Widget _buildEditableRow({
+    required String label,
+    required String value,
+    required String unit,
+    required VoidCallback onEdit
+  }) {
+    return Container(
+      height: _fieldHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: _textFieldFillColor,
+        borderRadius: BorderRadius.circular(_fieldRadius),
+        border: Border.all(width: 1.0, color: _dividerColor),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text("$label: $value $unit", style: _valueTextStyle),
+          IconButton(
+            icon: const Icon(Icons.edit, color: _textColorBlack),
+            onPressed: onEdit,
           ),
-        ),
-        
-        // Berikan sedikit jarak antara teks dan tombol (Sunnah memperindah tampilan)
-        const SizedBox(width: 8), 
-
-        IconButton(
-          icon: const Icon(Icons.edit, color: _textColorBlack),
-          onPressed: onEdit,
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
   Widget _buildNotificationRow({
     required String label,

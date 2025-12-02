@@ -1,132 +1,38 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-// <<<<<<< HEAD
-
-
-//     static const String laptopIP = '172.24.121.82';
-
-//     // static const String API_ENDPOINT = "http://10.0.2.2/eatwise2/";
-//     static String get baseUrl {
-//       if (kIsWeb) {
-//         // Untuk Web (Chrome)
-//         return 'http://172.24.121.82/EatWise2.0'; 
-//       }
-//       if (Platform.isAndroid) {
-//         // Untuk Android Emulator
-//         return 'http://172.24.121.82/EatWise2.0';
-//       }
-//       if (Platform.isIOS) {
-//         // Untuk iOS Simulator
-//         return 'http://172.24.121.82/EatWise2.0';
-//       }
-//       // Default
-//       return 'http://172.24.121.82/EatWise2.0';
-// =====
 class AppConfig {
-  // ============================================
-  // SETTING: Ganti ini sesuai device yang dipakai
-  // ============================================
-//   
+  // ⚠️ PENTING: Sesuaikan dengan nama folder project di htdocs Anda
+  // Apakah 'eatwise2', 'EatWise2.0', atau 'eatwise2/EatWise2.0'?
+  // Saya ambil berdasarkan kode terakhir Anda:
+  static const String _projectPath = 'EatWise2.0'; 
 
-  static const String laptopIP = '172.24.121.82';
-
-//     // static const String API_ENDPOINT = "http://10.0.2.2/eatwise2/";
-//     static String get baseUrl {
-//       if (kIsWeb) {
-//         // Untuk Web (Chrome)
-//         return 'http://172.24.121.82/EatWise2.0'; 
-//       }
-//       if (Platform.isAndroid) {
-//         // Untuk Android Emulator
-//         return 'http://172.24.121.82/EatWise2.0';
-//       }
-//       if (Platform.isIOS) {
-//         // Untuk iOS Simulator
-//         return 'http://172.24.121.82/EatWise2.0';
-//       }
-//       // Default
-//       return 'http://172.24.121.82/EatWise2.0';
-
-// static const String laptopIP = '172.24.121.82';
-
-    static const String API_ENDPOINT = "http://10.0.2.2/eatwise2/";
-    static String get baseUrl {
-      if (kIsWeb) {
-        // Untuk Web (Chrome)
-        return 'http://172.24.121.82/EatWise2.0'; 
-      }
-      if (Platform.isAndroid) {
-        // Untuk Android Emulator
-        return 'http://172.24.121.82/EatWise2.0';
-      }
-      if (Platform.isIOS) {
-        // Untuk iOS Simulator
-        return 'http://172.24.121.82/EatWise2.0';
-      }
-      // Default
-      return 'http://172.24.121.82/EatWise2.0';
+  static String get baseUrl {
+    // 1. Jika dijalankan di Web (Chrome)
+    if (kIsWeb) {
+      return 'http://localhost/$_projectPath';
     }
-//   import 'dart:io' show Platform;
-// import 'package:flutter/foundation.dart' show kIsWeb;
 
-// class AppConfig {
-//   // ============================================
-//   // SETTING: Ganti ini sesuai device yang dipakai
-//   // ============================================
-//   static const bool usePhysicalDevice = true; // true = HP Fisik, false = Emulator/Simulator
-  
-//   // IP Laptop kamu (untuk HP fisik)
-//   // static const String laptopIP = '10.252.145.7'; 
-//   // // ← DIUBAH INI!
+    // 2. Jika dijalankan di Android (Emulator & Fisik)
+    if (Platform.isAndroid) {
+      // Deteksi apakah ini Emulator atau HP Fisik
+      // Cara gampang: Asumsi default Emulator dulu untuk kasus Anda
+      
+      // KHUSUS EMULATOR ANDROID:
+      // Emulator melihat "localhost" laptop Anda sebagai "10.0.2.2"
+      return 'http://10.0.2.2/$_projectPath';
+      
+      /* CATATAN: Jika nanti pakai HP Fisik, ganti baris di atas jadi:
+         return 'http://192.168.1.XX/$_projectPath'; (IP Laptop)
+      */
+    }
 
-//   static const String laptopIP = '10.252.149.149';
+    // 3. Jika dijalankan di iOS Simulator
+    if (Platform.isIOS) {
+      return 'http://localhost/$_projectPath';
+    }
 
-//   // ============================================
-//   // BASE URL (Otomatis sesuai device)
-//   // ============================================
-//   static String get baseUrl {
-//     // Kalau pakai HP fisik
-//     if (usePhysicalDevice) {
-//       // return 'http://$laptopIP/eatwise2/EatWise2.0';
-//       return 'http://10.0.2.2/eatwise2/EatWise2.0';
-//     }
-    
-//     // Kalau Web (Chrome)
-//     if (kIsWeb) {
-//       return 'http://localhost/eatwise2/EatWise2.0';
-//     }
-    
-//     // Kalau Android Emulator
-//     if (Platform.isAndroid) {
-//       return 'http://10.0.2.2/eatwise2/EatWise2.0';
-//     }
-    
-//     // Kalau iOS Simulator
-//     if (Platform.isIOS) {
-//       return 'http://localhost/eatwise2/EatWise2.0';
-//     }
-    
-//     // Default (fallback)
-//     return 'http://localhost/eatwise2/EatWise2.0';
-//   }
-// }
-    // Kalau Web (Chrome)
-  //   if (kIsWeb) {
-  //     return 'http://localhost/eatwise2/eatwise2';
-  //   }
-
-  //   // Kalau Android Emulator
-  //   if (Platform.isAndroid) {
-  //     return 'http://10.0.2.2/eatwise2/eatwise2';
-  //   }
-
-  //   // Kalau iOS Simulator
-  //   if (Platform.isIOS) {
-  //     return 'http://localhost/eatwise2/eatwise2';
-  //   }
-
-  //   // Default (fallback)
-  //   return 'http://localhost/eatwise2/eatwise2';
-  // }
+    // Default Fallback
+    return 'http://localhost/$_projectPath';
+  }
 }

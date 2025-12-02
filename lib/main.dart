@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eatwise2/util/session.dart';
 import 'package:eatwise2/login.dart';
 import 'package:eatwise2/page/home_integrated.dart';
+import 'package:eatwise2/page/hasil_integrated.dart';  
 
 
 void main() async {
@@ -41,11 +42,13 @@ class _MyAppState extends State<MyApp> {
             );
           } else if (snapshot.connectionState == ConnectionState.done) {
             if (snapshot.hasData) {
-            // if (prefs.getBool(IS_LOGIN) ?? false) {
-            //       result = const HomeContent(); // Gunakan HomeContent baru
-            //     } else {
+            if (prefs.getBool(IS_LOGIN) ?? false) {
+                  int idproduk = 11;
+                  // result = const HomeContent(); 
+                  result = const ReportScreenApi(productId: 11,);// Gunakan HomeContent baru
+                } else {
                  result = LoginPage();
-            //     }
+                }
             } else {
               // result = SignUpPage();
               return Container(child: Text('Error..'));

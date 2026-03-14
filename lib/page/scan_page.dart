@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 // Import halaman hasil dan service
 import 'package:eatwise2/page/hasil_integrated.dart';
 import 'package:eatwise2/services/product_service_fixed.dart';
+import 'package:eatwise2/util/app_theme.dart';
+import 'package:eatwise2/widgets/common_widgets.dart';
 
 class ScanPage extends StatefulWidget {
   const ScanPage({Key? key}) : super(key: key);
@@ -14,18 +15,31 @@ class ScanPage extends StatefulWidget {
   State<ScanPage> createState() => _ScanPageState();
 }
 
-class _ScanPageState extends State<ScanPage> {
+class _ScanPageState extends State<ScanPage> with SingleTickerProviderStateMixin {
   MobileScannerController cameraController = MobileScannerController();
   bool _isProcessing = false;
   String? _lastScannedCode;
-  bool _isTorchOn = false; // Track torch state manually
+  bool _isTorchOn = false;
 
-  // Warna tema
-  static const Color _primaryColor = Color(0xFF388E3C);
-  static const Color _backgroundColor = Color(0xFFF5F5F5);
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat(reverse: true);
+    _animation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+  }
 
   @override
   void dispose() {
+    _animationController.dispose();
     cameraController.dispose();
     super.dispose();
   }
@@ -33,36 +47,33 @@ class _ScanPageState extends State<ScanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _backgroundColor,
+      backgroundColor: AppColors.background,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(
-          'Scan Produk',
-          style: GoogleFonts.inter(
+          'Scan Product',
+          style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
         ),
-        backgroundColor: _primaryColor,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          // Toggle flash
           IconButton(
             icon: Icon(
               _isTorchOn ? Icons.flash_on : Icons.flash_off,
               color: _isTorchOn ? Colors.amber : Colors.white,
             ),
             onPressed: () {
-              setState(() {
-                _isTorchOn = !_isTorchOn;
-              });
+              setState(() => _isTorchOn = !_isTorchOn);
               cameraController.toggleTorch();
             },
           ),
-          // Switch camera
           IconButton(
             icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
             onPressed: () => cameraController.switchCamera(),
@@ -71,13 +82,11 @@ class _ScanPageState extends State<ScanPage> {
       ),
       body: Stack(
         children: [
-          // Camera View
           MobileScanner(
             controller: cameraController,
             onDetect: (capture) {
               if (!_isProcessing) {
-                final List<Barcode> barcodes = capture.barcodes;
-                for (final barcode in barcodes) {
+                for (final barcode in capture.barcodes) {
                   if (barcode.rawValue != null && barcode.rawValue != _lastScannedCode) {
                     _handleBarcodeDetected(barcode.rawValue!);
                     break;
@@ -86,90 +95,34 @@ class _ScanPageState extends State<ScanPage> {
               }
             },
           ),
-
-          // Overlay dengan frame scan
-          CustomPaint(
-            painter: ScannerOverlay(),
-            child: Container(),
+          AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              return CustomPaint(
+                painter: ScannerOverlay(animationValue: _animation.value),
+                child: Container(),
+              );
+            },
           ),
-
-          // Instruksi
           Positioned(
-            top: 40,
-            left: 0,
-            right: 0,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 24),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Arahkan kamera ke barcode produk',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-
-          // Tombol Pilih dari Galeri
-          Positioned(
-            bottom: 40,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Column(
+            top: MediaQuery.of(context).padding.top + 80,
+            left: 24,
+            right: 24,
+            child: ModernCard(
+              isGlass: true,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Tombol Galeri
-                  ElevatedButton.icon(
-                    onPressed: _pickImageFromGallery,
-                    icon: const Icon(Icons.photo_library),
-                    label: Text(
-                      'Pilih dari Galeri',
+                  const Icon(Icons.info_outline, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Align barcode within the frame to scan',
                       style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: _primaryColor,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      elevation: 8,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Tombol Input Manual
-                  OutlinedButton.icon(
-                    onPressed: _showManualInputDialog,
-                    icon: const Icon(Icons.keyboard),
-                    label: Text(
-                      'Input Barcode Manual',
-                      style: GoogleFonts.inter(
+                        color: Colors.white,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white, width: 2),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
                       ),
                     ),
                   ),
@@ -177,17 +130,34 @@ class _ScanPageState extends State<ScanPage> {
               ),
             ),
           ),
-
-          // Loading indicator
-          if (_isProcessing)
-            Container(
-              color: Colors.black.withOpacity(0.5),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          Positioned(
+            bottom: 40,
+            left: 24,
+            right: 24,
+            child: Column(
+              children: [
+                GradientButton(
+                  text: 'Upload from Gallery',
+                  onPressed: _pickImageFromGallery,
+                  height: 56,
                 ),
-              ),
+                const SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed: _showManualInputDialog,
+                  icon: const Icon(Icons.keyboard_outlined, color: Colors.white),
+                  label: Text(
+                    'Enter Barcode Manually',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ],
             ),
+          ),
+          if (_isProcessing) const LoadingIndicator(),
         ],
       ),
     );
@@ -220,12 +190,12 @@ class _ScanPageState extends State<ScanPage> {
     try {
       // Fetch product dari API
       final product = await ProductService.getProductByBarcode(barcode);
-      
+
       // Sementara pakai delay untuk simulasi
       await Future.delayed(const Duration(seconds: 1));
-      
+
       if (!mounted) return;
-      
+
       // Navigate ke halaman hasil
       print("Navigating to ReportScreenApi with product: $product");
       int idProduct = product != null ? product['id'] as int : 0;
@@ -240,7 +210,6 @@ class _ScanPageState extends State<ScanPage> {
       } else {
         _showProductNotFoundDialog(barcode);
       }
-      
     } catch (e) {
       if (!mounted) return;
       _showErrorDialog('Gagal memuat data produk: $e');
@@ -248,33 +217,72 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   // ============================================
-  // PICK IMAGE FROM GALLERY
+  // PICK IMAGE FROM GALLERY - UNTUK SCAN BARCODE
   // ============================================
   Future<void> _pickImageFromGallery() async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
-    if (image != null) {
-      setState(() => _isProcessing = true);
-      
-      setState(() => _isProcessing = false);
-      
-      if (!mounted) return;
-      
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Fitur Image Recognition', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-          content: const Text('Fitur scan dari gambar masih dalam pengembangan.\n\nGunakan scan barcode atau input manual untuk sementara.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
+    try {
+      // Ambil gambar dari galeri
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 100, // High quality untuk scan barcode
       );
+
+      if (image == null) return; // User cancelled
+
+      if (!mounted) return;
+
+      // Coba scan barcode dari gambar
+      setState(() => _isProcessing = true);
+
+      // Stop camera sementara
+      await cameraController.stop();
+
+      // Scan barcode dari gambar menggunakan mobile_scanner
+      final barcodeCapture = await cameraController.analyzeImage(image.path);
+
+      if (barcodeCapture != null && barcodeCapture.barcodes.isNotEmpty) {
+        final barcode = barcodeCapture.barcodes.first;
+        if (barcode.rawValue != null) {
+          await _fetchProductAndNavigate(barcode.rawValue!);
+        } else {
+          _showNoBarcodeFoundDialog();
+        }
+      } else {
+        _showNoBarcodeFoundDialog();
+      }
+
+      setState(() => _isProcessing = false);
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      if (!mounted) return;
+      _showErrorDialog('Gagal memproses gambar: $e');
+      cameraController.start();
     }
+  }
+
+  // ============================================
+  // SHOW NO BARCODE FOUND DIALOG
+  // ============================================
+  void _showNoBarcodeFoundDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('No Barcode Found', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        content: const Text('We couldn\'t detect a barcode in that image. Please try again with a clearer photo.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              cameraController.start();
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   // ============================================
@@ -282,24 +290,26 @@ class _ScanPageState extends State<ScanPage> {
   // ============================================
   void _showManualInputDialog() {
     final TextEditingController controller = TextEditingController();
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Input Barcode Manual', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Nomor Barcode',
-            hintText: 'Contoh: 8992761111111',
-            border: OutlineInputBorder(),
-          ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Manual Input', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ModernInput(
+              label: 'Barcode Number',
+              hint: 'e.g. 8992761111111',
+              controller: controller,
+              keyboardType: TextInputType.number,
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -308,8 +318,7 @@ class _ScanPageState extends State<ScanPage> {
                 _handleBarcodeDetected(controller.text);
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: _primaryColor),
-            child: const Text('Cari'),
+            child: const Text('Find Product'),
           ),
         ],
       ),
@@ -323,13 +332,14 @@ class _ScanPageState extends State<ScanPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Error', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Error', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: AppColors.error)),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              cameraController.start(); // Restart scanner
+              cameraController.start();
             },
             child: const Text('OK'),
           ),
@@ -345,23 +355,23 @@ class _ScanPageState extends State<ScanPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Produk Tidak Ditemukan', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Text('Barcode "$barcode" tidak ditemukan di database.\n\nAnda bisa menambahkan produk ini secara manual.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Product Not Found', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        content: Text('Barcode "$barcode" was not found in our database.'),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               cameraController.start();
             },
-            child: const Text('Scan Lagi'),
+            child: const Text('Scan Again'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Navigate ke form input produk manual
+              // TODO: Manual entry page
             },
-            style: ElevatedButton.styleFrom(backgroundColor: _primaryColor),
-            child: const Text('Input Manual'),
+            child: const Text('Add Manually'),
           ),
         ],
       ),
@@ -373,6 +383,9 @@ class _ScanPageState extends State<ScanPage> {
 // CUSTOM PAINTER: SCANNER OVERLAY
 // ============================================
 class ScannerOverlay extends CustomPainter {
+  final double animationValue;
+  ScannerOverlay({required this.animationValue});
+
   @override
   void paint(Canvas canvas, Size size) {
     final double scanAreaSize = size.width * 0.7;
@@ -382,60 +395,71 @@ class ScannerOverlay extends CustomPainter {
 
     // Semi-transparent overlay
     final Paint backgroundPaint = Paint()
-      ..color = Colors.black.withOpacity(0.5);
+      ..color = Colors.black.withValues(alpha: 0.6);
     canvas.drawPath(
       Path()
         ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
-        ..addRRect(RRect.fromRectAndRadius(scanArea, const Radius.circular(16)))
+        ..addRRect(RRect.fromRectAndRadius(scanArea, const Radius.circular(24)))
         ..fillType = PathFillType.evenOdd,
       backgroundPaint,
     );
 
     // Frame corners
     final Paint framePaint = Paint()
-      ..color = Colors.white
+      ..color = AppColors.primary
       ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
     final double cornerLength = 40;
+    final double radius = 24; // Matching the cutout radius
 
     // Top-left corner
-    canvas.drawPath(
-      Path()
-        ..moveTo(left, top + cornerLength)
-        ..lineTo(left, top)
-        ..lineTo(left + cornerLength, top),
-      framePaint,
-    );
+    canvas.drawPath(Path()
+      ..moveTo(left, top + cornerLength)
+      ..lineTo(left, top + radius)
+      ..arcToPoint(Offset(left + radius, top), radius: Radius.circular(radius))
+      ..lineTo(left + cornerLength, top), framePaint);
 
     // Top-right corner
-    canvas.drawPath(
-      Path()
-        ..moveTo(left + scanAreaSize - cornerLength, top)
-        ..lineTo(left + scanAreaSize, top)
-        ..lineTo(left + scanAreaSize, top + cornerLength),
-      framePaint,
-    );
+    canvas.drawPath(Path()
+      ..moveTo(left + scanAreaSize - cornerLength, top)
+      ..lineTo(left + scanAreaSize - radius, top)
+      ..arcToPoint(Offset(left + scanAreaSize, top + radius), radius: Radius.circular(radius))
+      ..lineTo(left + scanAreaSize, top + cornerLength), framePaint);
 
     // Bottom-left corner
-    canvas.drawPath(
-      Path()
-        ..moveTo(left, top + scanAreaSize - cornerLength)
-        ..lineTo(left, top + scanAreaSize)
-        ..lineTo(left + cornerLength, top + scanAreaSize),
-      framePaint,
-    );
+    canvas.drawPath(Path()
+      ..moveTo(left, top + scanAreaSize - cornerLength)
+      ..lineTo(left, top + scanAreaSize - radius)
+      ..arcToPoint(Offset(left + radius, top + scanAreaSize), radius: Radius.circular(radius), clockwise: false)
+      ..lineTo(left + cornerLength, top + scanAreaSize), framePaint);
 
     // Bottom-right corner
-    canvas.drawPath(
-      Path()
-        ..moveTo(left + scanAreaSize - cornerLength, top + scanAreaSize)
-        ..lineTo(left + scanAreaSize, top + scanAreaSize)
-        ..lineTo(left + scanAreaSize, top + scanAreaSize - cornerLength),
-      framePaint,
+    canvas.drawPath(Path()
+      ..moveTo(left + scanAreaSize - cornerLength, top + scanAreaSize)
+      ..lineTo(left + scanAreaSize - radius, top + scanAreaSize)
+      ..arcToPoint(Offset(left + scanAreaSize, top + scanAreaSize - radius), radius: Radius.circular(radius), clockwise: false)
+      ..lineTo(left + scanAreaSize, top + scanAreaSize - cornerLength), framePaint);
+
+    // Animated Scanning Line
+    final Paint linePaint = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          AppColors.primary.withValues(alpha: 0),
+          AppColors.primary,
+          AppColors.primary.withValues(alpha: 0),
+        ],
+      ).createShader(Rect.fromLTWH(left, top + (scanAreaSize * animationValue), scanAreaSize, 2))
+      ..strokeWidth = 2;
+
+    canvas.drawLine(
+      Offset(left + 10, top + (scanAreaSize * animationValue)),
+      Offset(left + scanAreaSize - 10, top + (scanAreaSize * animationValue)),
+      linePaint..strokeWidth = 3,
     );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(ScannerOverlay oldDelegate) => oldDelegate.animationValue != animationValue;
 }

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:eatwise2/util/app_theme.dart';
+import 'package:eatwise2/widgets/common_widgets.dart';
 import 'package:eatwise2/services/profile_service_fixed.dart';
-import 'package:intl/intl.dart'; // Tambahkan di pubspec.yaml: intl: ^0.18.0
+import 'package:eatwise2/services/notification_service.dart';
+import 'package:eatwise2/util/util.dart';
+import 'package:intl/intl.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final int userId;
@@ -14,67 +18,11 @@ class UserProfileScreen extends StatefulWidget {
 class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _isLoading = false;
 
-  // --- ASET DESAIN ---
-  static const Color _backgroundColor = Color(0xFFAEB8AF);
-  static const Color _buttonColor = Color(0xFF549E61);
-  static const Color _textFieldFillColor = Color(0x51D1D1D1);
-  static const Color _textColorBlack = Color(0xFF000000);
-  static const Color _dividerColor = Color(0xFF000000);
-
-  static final TextStyle _subtitleStyle = GoogleFonts.inter(
-    fontSize: 28.12,
-    fontWeight: FontWeight.w500,
-    color: _textColorBlack,
-  );
-  static final TextStyle _bodyStyle = GoogleFonts.inter(
-    fontSize: 18.62,
-    fontWeight: FontWeight.w200,
-    color: _textColorBlack,
-  );
-  static final TextStyle _headingStyle = GoogleFonts.inter(
-    fontSize: 24,
-    fontWeight: FontWeight.w700,
-    color: _textColorBlack,
-  );
-  static final TextStyle _labelStyle = GoogleFonts.inter(
-    fontSize: 17.88,
-    fontWeight: FontWeight.w300,
-    color: _textColorBlack,
-  );
-  static final TextStyle _valueTextStyle = GoogleFonts.inter(
-    fontSize: 24.23,
-    fontWeight: FontWeight.w400,
-    color: _textColorBlack,
-  );
-  static final TextStyle _buttonTextStyle = GoogleFonts.inter(
-    fontSize: 24.23,
-    fontWeight: FontWeight.w400,
-    color: _textColorBlack,
-  );
-  static final TextStyle _timeTextStyle = GoogleFonts.inter(
-    fontSize: 20,
-    fontWeight: FontWeight.w600,
-    color: _buttonColor,
-  );
-
-  static const double _sidePadding = 32.0;
-  static const double _fieldHeight = 60.0;
-  static const double _fieldRadius = 10.0;
-  static const double _buttonHeight = 60.0;
-  static const double _buttonRadius = 10.0;
-
   // --- STATE DATA FISIK ---
-<<<<<<< HEAD
-  DateTime? _tanggalLahir;
-  int _usia = 0;
-  String _berat = "65.5";
-  String _tinggi = "175";
-=======
   DateTime? _tanggalLahir; // Ganti dari String _usia
   int _usia = 0; // Computed dari tanggal lahir
-  String _berat = "65.5";   
-  String _tinggi = "175";   
->>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
+  String _berat = "65.5";
+  String _tinggi = "175";
   String _username = "User";
 
   // --- State Checkbox Riwayat Kesehatan (Tambah Hipertensi) ---
@@ -82,16 +30,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _kolesterolChecked = false;
   bool _hipertensiChecked = false; // BARU
 
-<<<<<<< HEAD
-  // --- STATE BARU: Bahan yang Dihindari ---
+  // --- STATE BARU: Bahan yang Dihindari (Gunakan TextField) ---
   final TextEditingController _bahanDihindariController =
       TextEditingController();
-  List<String> _bahanDihindariList = [];
-=======
-  // --- STATE BARU: Bahan yang Dihindari (Gunakan TextField) ---
-  final TextEditingController _bahanDihindariController = TextEditingController();
   List<String> _bahanDihindariList = []; // List bahan yang sudah dinormalisasi
->>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
 
   // --- STATE NOTIFIKASI MAKAN ---
   bool _notifSarapan = true;
@@ -105,6 +47,30 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   void initState() {
     super.initState();
     _loadProfile();
+    _requestNotificationPermissions();
+  }
+
+  // Request notification permissions di Android 13+
+  Future<void> _requestNotificationPermissions() async {
+    try {
+      final enabled = await NotificationService.areNotificationsEnabled();
+      if (!enabled) {
+        print('⚠️ Notifications are disabled');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  '⚠️ Mohon aktifkan izin notifikasi di Settings untuk menerima pengingat makan'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      } else {
+        print('✅ Notifications are enabled');
+      }
+    } catch (e) {
+      print('Error checking notification permission: $e');
+    }
   }
 
   @override
@@ -113,20 +79,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     super.dispose();
   }
 
+  // Safe setState wrappers
+  void _safeSetState(VoidCallback fn) {
+    if (mounted) {
+      setState(fn);
+    }
+  }
+
   Future<void> _loadProfile() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
-<<<<<<< HEAD
 
     try {
-      print("🔍 DEBUG: Loading profile untuk user ID: ${widget.userId}");
-
       final profile = await ProfileService.getProfile(widget.userId);
 
-      if (profile != null) {
-        print("✅ DEBUG: Profile berhasil dimuat");
-        print("📦 DEBUG: Data profile: $profile");
+      if (!mounted) return; // Check again after async operation
 
+      if (profile != null) {
         setState(() {
+          // Load tanggal lahir dan hitung umur
           _tanggalLahir =
               ProfileService.parseBirthDate(profile['tanggal_lahir']);
           if (_tanggalLahir != null) {
@@ -137,23 +108,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _tinggi = profile['tinggi_badan']?.toString() ?? "175";
           _diabetesChecked = profile['riwayat_diabetes'] == 1;
           _kolesterolChecked = profile['riwayat_kolesterol'] == 1;
-          _hipertensiChecked = profile['riwayat_hipertensi'] == 1;
+          _hipertensiChecked = profile['riwayat_hipertensi'] == 1; // BARU
+          _username = profile['nama_lengkap']?.toString() ?? "User";
 
-          // ✅ LOAD BAHAN DIHINDARI
+          // Load bahan yang dihindari
           if (profile['bahan_dihindari'] != null &&
-              profile['bahan_dihindari'].toString().isNotEmpty) {
-            String bahanRaw = profile['bahan_dihindari'].toString();
-            print("🔍 DEBUG: Bahan dihindari dari database: '$bahanRaw'");
-
-            _bahanDihindariList = _normalizeBahanList(bahanRaw);
+              profile['bahan_dihindari'].isNotEmpty) {
+            _bahanDihindariList =
+                _normalizeBahanList(profile['bahan_dihindari']);
             _bahanDihindariController.text = _bahanDihindariList.join(', ');
-
-            print(
-                "✅ DEBUG: Bahan dihindari setelah normalisasi: $_bahanDihindariList");
-          } else {
-            print("⚠️ DEBUG: Bahan dihindari kosong di database");
           }
 
+          // Load waktu notifikasi jika ada
           if (profile['waktu_sarapan'] != null) {
             _waktuSarapan = _parseTimeString(profile['waktu_sarapan']);
           }
@@ -168,62 +134,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _notifSiang = profile['notif_siang_aktif'] == 1;
           _notifMalam = profile['notif_malam_aktif'] == 1;
         });
-      } else {
-        print("❌ DEBUG: Profile tidak ditemukan (null)");
       }
-    } catch (e, stackTrace) {
-      print("❌ ERROR: Gagal load profile: $e");
-      print("📍 Stack trace: $stackTrace");
-
+    } catch (e) {
+      print('Error loading profile: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading profile: $e')),
+          SnackBar(content: Text('Gagal memuat profile: $e')),
         );
       }
-=======
-    
-    final profile = await ProfileService.getProfile(widget.userId);
-    
-    if (profile != null) {
-      setState(() {
-        // Load tanggal lahir dan hitung umur
-        _tanggalLahir = ProfileService.parseBirthDate(profile['tanggal_lahir']);
-        if (_tanggalLahir != null) {
-          _usia = ProfileService.calculateAge(_tanggalLahir!);
-        }
-        
-        _berat = profile['berat_badan']?.toString() ?? "65.5";
-        _tinggi = profile['tinggi_badan']?.toString() ?? "175";
-        _diabetesChecked = profile['riwayat_diabetes'] == 1;
-        _kolesterolChecked = profile['riwayat_kolesterol'] == 1;
-        _hipertensiChecked = profile['riwayat_hipertensi'] == 1; // BARU
-        _username = profile['nama_lengkap']?.toString() ?? "User";
-        
-        // Load bahan yang dihindari
-        if (profile['Bahan_dihindari'] != null && profile['Bahan_dihindari'].isNotEmpty) {
-          _bahanDihindariList = _normalizeBahanList(profile['Bahan_dihindari']);
-          _bahanDihindariController.text = _bahanDihindariList.join(', ');
-        }
-        
-        // Load waktu notifikasi jika ada
-        if (profile['waktu_sarapan'] != null) {
-          _waktuSarapan = _parseTimeString(profile['waktu_sarapan']);
-        }
-        if (profile['waktu_siang'] != null) {
-          _waktuSiang = _parseTimeString(profile['waktu_siang']);
-        }
-        if (profile['waktu_malam'] != null) {
-          _waktuMalam = _parseTimeString(profile['waktu_malam']);
-        }
-        
-        _notifSarapan = profile['notif_sarapan_aktif'] == 1;
-        _notifSiang = profile['notif_siang_aktif'] == 1;
-        _notifMalam = profile['notif_malam_aktif'] == 1;
-      });
->>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
-
-    setState(() => _isLoading = false);
   }
 
   // Helper untuk parse string waktu "HH:mm:ss" ke TimeOfDay
@@ -240,11 +163,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-<<<<<<< HEAD
-  /// ✅ NORMALISASI BAHAN - KUNCI UTAMA UNTUK MATCHING
-=======
   // Normalisasi list bahan (lowercase, trim, remove duplicates)
->>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
   List<String> _normalizeBahanList(String input) {
     if (input.trim().isEmpty) return [];
 
@@ -252,44 +171,36 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         .split(',')
         .map((e) => e.trim().toLowerCase())
         .where((e) => e.isNotEmpty)
-<<<<<<< HEAD
-        .toSet() // Hapus duplikat
-=======
         .toSet() // Remove duplicates
->>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
         .toList();
   }
 
   // Fungsi untuk cek apakah bahan ada dalam list (case insensitive)
   bool _isBahanDihindari(String bahan, List<String> bahanList) {
     String normalizedBahan = bahan.trim().toLowerCase();
-    return bahanList.any((item) => item.contains(normalizedBahan) || normalizedBahan.contains(item));
+    return bahanList.any((item) =>
+        item.contains(normalizedBahan) || normalizedBahan.contains(item));
   }
 
   Future<void> _handleSave() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
-<<<<<<< HEAD
 
     try {
-      // ✅ NORMALISASI INPUT SEBELUM SIMPAN
-      String inputBahan = _bahanDihindariController.text.trim();
-      print("🔍 DEBUG: Input bahan dihindari dari user: '$inputBahan'");
-
-      _bahanDihindariList = _normalizeBahanList(inputBahan);
-      String bahanFinal = _bahanDihindariList.join(',');
-
-      print("✅ DEBUG: Bahan setelah normalisasi: $_bahanDihindariList");
-      print("💾 DEBUG: Akan disimpan sebagai: '$bahanFinal'");
+      // Normalisasi input bahan yang dihindari
+      _bahanDihindariList = _normalizeBahanList(_bahanDihindariController.text);
 
       final profileData = {
         'nama_lengkap': _username,
-        'tanggal_lahir': _tanggalLahir?.toIso8601String().split('T')[0],
+        'tanggal_lahir': _tanggalLahir
+            ?.toIso8601String()
+            .split('T')[0], // Format: YYYY-MM-DD
         'berat_badan': double.tryParse(_berat),
         'tinggi_badan': double.tryParse(_tinggi),
         'riwayat_diabetes': _diabetesChecked ? 1 : 0,
         'riwayat_kolesterol': _kolesterolChecked ? 1 : 0,
-        'riwayat_hipertensi': _hipertensiChecked ? 1 : 0,
-        'bahan_dihindari': bahanFinal, // ✅ SIMPAN SEBAGAI STRING
+        'riwayat_hipertensi': _hipertensiChecked ? 1 : 0, // BARU
+        'bahan_dihindari': _bahanDihindariList.join(','), // Simpan sebagai CSV
         'waktu_sarapan': ProfileService.timeOfDayToString(
             _waktuSarapan.hour, _waktuSarapan.minute),
         'waktu_siang': ProfileService.timeOfDayToString(
@@ -301,725 +212,456 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         'notif_malam_aktif': _notifMalam ? 1 : 0,
       };
 
-      print("📤 DEBUG: Mengirim data ke server...");
-      print("📦 DEBUG: Profile data: $profileData");
-
       final success =
           await ProfileService.saveProfile(widget.userId, profileData);
 
+      if (!mounted) return;
+
       if (success) {
-        print("✅ DEBUG: Profile berhasil disimpan!");
+        // Setup notifikasi untuk jadwal makan
+        await _setupMealNotifications();
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ Profile berhasil disimpan!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.pop(context, true);
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile berhasil disimpan!')),
+        );
+        Navigator.pop(context, true);
       } else {
-        print("❌ DEBUG: Gagal menyimpan profile (server return false)");
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('❌ Gagal menyimpan profile'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal menyimpan profile')),
+        );
       }
-    } catch (e, stackTrace) {
-      print("❌ ERROR: Exception saat save: $e");
-      print("📍 Stack trace: $stackTrace");
-
+    } catch (e) {
+      print('Error saving profile: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  /// Setup notifikasi untuk jadwal makan
+  Future<void> _setupMealNotifications() async {
+    try {
+      print('🔔 Setting up meal notifications...');
+
+      // Cancel semua notifikasi lama terlebih dahulu
+      await NotificationService.cancelNotification(1); // Sarapan
+      await NotificationService.cancelNotification(2); // Makan Siang
+      await NotificationService.cancelNotification(3); // Makan Malam
+
+      int scheduledCount = 0;
+
+      // Setup notifikasi baru jika aktif
+      if (_notifSarapan) {
+        await NotificationService.scheduleMealNotification(
+          id: 1,
+          title: '🍳 Waktu Sarapan',
+          body: 'Jangan lupa sarapan sehat untuk memulai hari!',
+          hour: _waktuSarapan.hour,
+          minute: _waktuSarapan.minute,
+        );
+        scheduledCount++;
+        print('   ✓ Sarapan: ${_waktuSarapan.hour}:${_waktuSarapan.minute}');
+      }
+
+      if (_notifSiang) {
+        await NotificationService.scheduleMealNotification(
+          id: 2,
+          title: '🍱 Waktu Makan Siang',
+          body: 'Saatnya makan siang untuk energi sore hari!',
+          hour: _waktuSiang.hour,
+          minute: _waktuSiang.minute,
+        );
+        scheduledCount++;
+        print('   ✓ Siang: ${_waktuSiang.hour}:${_waktuSiang.minute}');
+      }
+
+      if (_notifMalam) {
+        await NotificationService.scheduleMealNotification(
+          id: 3,
+          title: '🍽️ Waktu Makan Malam',
+          body: 'Waktunya makan malam. Jangan skip ya!',
+          hour: _waktuMalam.hour,
+          minute: _waktuMalam.minute,
+        );
+        scheduledCount++;
+        print('   ✓ Malam: ${_waktuMalam.hour}:${_waktuMalam.minute}');
+      }
+
+      print(
+          '✅ Meal notifications setup complete: $scheduledCount notifications scheduled');
+
+      // Print pending notifications untuk verify
+      await NotificationService.printPendingNotifications();
+
+      if (mounted && scheduledCount > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Error: $e'),
-            backgroundColor: Colors.red,
+            content: Text('✅ $scheduledCount pengingat makan telah diatur!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
-=======
-    
-    // Normalisasi input bahan yang dihindari
-    _bahanDihindariList = _normalizeBahanList(_bahanDihindariController.text);
-    
-    final profileData = {
-      'nama_lengkap': _username,
-      'tanggal_lahir': _tanggalLahir?.toIso8601String().split('T')[0], // Format: YYYY-MM-DD
-      'berat_badan': double.tryParse(_berat),
-      'tinggi_badan': double.tryParse(_tinggi),
-      'riwayat_diabetes': _diabetesChecked ? 1 : 0,
-      'riwayat_kolesterol': _kolesterolChecked ? 1 : 0,
-      'riwayat_hipertensi': _hipertensiChecked ? 1 : 0, // BARU
-      'Bahan_dihindari': _bahanDihindariList.join(','), // Simpan sebagai CSV
-      'waktu_sarapan': ProfileService.timeOfDayToString(
-        _waktuSarapan.hour, 
-        _waktuSarapan.minute
-      ),
-      'waktu_siang': ProfileService.timeOfDayToString(
-        _waktuSiang.hour, 
-        _waktuSiang.minute
-      ),
-      'waktu_malam': ProfileService.timeOfDayToString(
-        _waktuMalam.hour, 
-        _waktuMalam.minute
-      ),
-      'notif_sarapan_aktif': _notifSarapan ? 1 : 0,
-      'notif_siang_aktif': _notifSiang ? 1 : 0,
-      'notif_malam_aktif': _notifMalam ? 1 : 0,
-    };
-    
-    final success = await ProfileService.saveProfile(widget.userId, profileData);
-    
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile berhasil disimpan!')),
-      );
-      Navigator.pop(context, true);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal menyimpan profile')),
-      );
->>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
+    } catch (e) {
+      print('⚠️ Error setting up notifications: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ Gagal mengatur notifikasi: $e'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
-
-    setState(() => _isLoading = false);
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _backgroundColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: _textColorBlack, size: 30),
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        title: Text(
+          'User Profile',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+            fontSize: 18,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SafeArea(
-<<<<<<< HEAD
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const LoadingIndicator(message: 'Loading profile...')
             : SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: _sidePadding),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-=======
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: _sidePadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-              Text('User Profile', style: _subtitleStyle),
-              const SizedBox(height: 8),
-              Text('Hi, $_username', style: _bodyStyle),
-              const SizedBox(height: 40),
-
-              // --- DATA FISIK ---
-              Text('Data Fisik', style: _headingStyle),
-              const SizedBox(height: 16),
-              
-              // Tanggal Lahir (Ganti dari Usia)
-              _buildDateRow(
-                label: "Tanggal Lahir",
-                date: _tanggalLahir,
-                onEdit: () => _showDatePicker(),
-              ),
-              const SizedBox(height: 12),
-              
-              // Tampilkan umur (read-only, computed)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(_fieldRadius),
-                ),
-                child: Row(
->>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
                   children: [
-                    const SizedBox(height: 8),
-                    Text('User Profile', style: _subtitleStyle),
-                    const SizedBox(height: 8),
-                    Text('Hi, $_username', style: _bodyStyle),
-                    const SizedBox(height: 40),
-
-                    Text('Data Fisik', style: _headingStyle),
-                    const SizedBox(height: 16),
-
-                    _buildDateRow(
-                      label: "Tanggal Lahir",
-                      date: _tanggalLahir,
-                      onEdit: () => _showDatePicker(),
-                    ),
-                    const SizedBox(height: 12),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(_fieldRadius),
-                      ),
-                      child: Row(
+                    const SizedBox(height: 20),
+                    _buildProfileHeader(),
+                    const SizedBox(height: 32),
+                    const SectionHeader(title: 'Data Fisik'),
+                    ModernCard(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
                         children: [
-                          Icon(Icons.cake, color: _buttonColor, size: 20),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Usia: $_usia tahun',
-                            style: _labelStyle.copyWith(
-                                fontWeight: FontWeight.w500),
+                          _buildDateRow(
+                            label: "Tanggal Lahir",
+                            date: _tanggalLahir,
+                            onEdit: () => _showDatePicker(),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.cake_rounded, color: AppColors.primary, size: 20),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Usia: $_usia tahun',
+                                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildEditableRow(
+                            label: "Berat Badan",
+                            value: _berat,
+                            unit: "kg",
+                            onEdit: () => _showEditDialog("Berat Badan", _berat, (val) => _safeSetState(() => _berat = val)),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildEditableRow(
+                            label: "Tinggi Badan",
+                            value: _tinggi,
+                            unit: "cm",
+                            onEdit: () => _showEditDialog("Tinggi Badan", _tinggi, (val) => _safeSetState(() => _tinggi = val)),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    _buildEditableRow(
-                      label: "Berat Badan",
-                      value: _berat,
-                      unit: "kg",
-                      onEdit: () => _showEditDialog("Berat Badan", _berat,
-                          (val) => setState(() => _berat = val)),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildEditableRow(
-                      label: "Tinggi Badan",
-                      value: _tinggi,
-                      unit: "cm",
-                      onEdit: () => _showEditDialog("Tinggi Badan", _tinggi,
-                          (val) => setState(() => _tinggi = val)),
-                    ),
-                    const SizedBox(height: 40),
-
-                    Text('Riwayat Kesehatan', style: _headingStyle),
-                    const SizedBox(height: 16),
-                    _buildCheckbox(
-                        label: 'Riwayat Diabetes',
-                        value: _diabetesChecked,
-                        onChanged: (val) =>
-                            setState(() => _diabetesChecked = val ?? false)),
-                    _buildCheckbox(
-                        label: 'Riwayat Kolesterol',
-                        value: _kolesterolChecked,
-                        onChanged: (val) =>
-                            setState(() => _kolesterolChecked = val ?? false)),
-                    _buildCheckbox(
-                        label: 'Riwayat Hipertensi',
-                        value: _hipertensiChecked,
-                        onChanged: (val) =>
-                            setState(() => _hipertensiChecked = val ?? false)),
-                    const SizedBox(height: 40),
-
-                    // ✅ BAGIAN BAHAN YANG DIHINDARI
-                    Text('Bahan yang Dihindari', style: _headingStyle),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Pisahkan dengan koma (,) untuk beberapa bahan',
-                      style: _labelStyle.copyWith(
-                          fontSize: 14, color: Colors.grey.shade700),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _bahanDihindariController,
-                      maxLines: 3,
-                      onChanged: (value) {
-                        // Debug real-time
-                        print("🔍 DEBUG: User mengetik: '$value'");
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Contoh: gluten, kacang, telur, susu',
-                        hintStyle: GoogleFonts.inter(color: Colors.grey),
-                        filled: true,
-                        fillColor: _textFieldFillColor,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(_fieldRadius),
-                          borderSide:
-                              const BorderSide(color: _dividerColor, width: 1),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(_fieldRadius),
-                          borderSide:
-                              const BorderSide(color: _dividerColor, width: 1),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(_fieldRadius),
-                          borderSide:
-                              const BorderSide(color: _buttonColor, width: 2),
-                        ),
+                    const SizedBox(height: 32),
+                    const SectionHeader(title: 'Riwayat Kesehatan'),
+                    ModernCard(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        children: [
+                          _buildToggleRow(
+                            icon: Icons.monitor_heart_rounded,
+                            label: 'Riwayat Diabetes',
+                            value: _diabetesChecked,
+                            onChanged: (val) => _safeSetState(() => _diabetesChecked = val),
+                          ),
+                          _buildToggleRow(
+                            icon: Icons.opacity_rounded,
+                            label: 'Riwayat Kolesterol',
+                            value: _kolesterolChecked,
+                            onChanged: (val) => _safeSetState(() => _kolesterolChecked = val),
+                          ),
+                          _buildToggleRow(
+                            icon: Icons.speed_rounded,
+                            label: 'Riwayat Hipertensi',
+                            value: _hipertensiChecked,
+                            onChanged: (val) => _safeSetState(() => _hipertensiChecked = val),
+                          ),
+                        ],
                       ),
-                      style: _labelStyle,
                     ),
-
-                    // ✅ PREVIEW BAHAN (OPTIONAL - HELPFUL FOR DEBUGGING)
-                    if (_bahanDihindariController.text.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue.shade200),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '📋 Preview (akan disimpan sebagai):',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.blue.shade900,
-                              ),
+                    const SizedBox(height: 32),
+                    const SectionHeader(title: 'Bahan yang Dihindari'),
+                    ModernCard(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pisahkan dengan koma (,) untuk beberapa bahan',
+                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _bahanDihindariController,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              hintText: 'Contoh: gluten, kacang, telur, susu',
+                              hintStyle: GoogleFonts.inter(color: AppColors.textHint, fontSize: 14),
+                              contentPadding: const EdgeInsets.all(16),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _normalizeBahanList(
-                                      _bahanDihindariController.text)
-                                  .join(', '),
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                color: Colors.blue.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
+                            style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 15),
+                          ),
+                        ],
                       ),
-                    ],
-
+                    ),
+                    const SizedBox(height: 32),
+                    const SectionHeader(title: 'Jadwal Makan'),
+                    ModernCard(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        children: [
+                          _buildNotificationRow(
+                            icon: Icons.breakfast_dining_rounded,
+                            label: "Sarapan",
+                            isActive: _notifSarapan,
+                            time: _waktuSarapan,
+                            onSwitchChanged: (val) => _safeSetState(() => _notifSarapan = val),
+                            onTimeTap: () => _selectTime(_waktuSarapan, (picked) => _safeSetState(() => _waktuSarapan = picked)),
+                          ),
+                          _buildNotificationRow(
+                            icon: Icons.lunch_dining_rounded,
+                            label: "Makan Siang",
+                            isActive: _notifSiang,
+                            time: _waktuSiang,
+                            onSwitchChanged: (val) => _safeSetState(() => _notifSiang = val),
+                            onTimeTap: () => _selectTime(_waktuSiang, (picked) => _safeSetState(() => _waktuSiang = picked)),
+                          ),
+                          _buildNotificationRow(
+                            icon: Icons.dinner_dining_rounded,
+                            label: "Makan Malam",
+                            isActive: _notifMalam,
+                            time: _waktuMalam,
+                            onSwitchChanged: (val) => _safeSetState(() => _notifMalam = val),
+                            onTimeTap: () => _selectTime(_waktuMalam, (picked) => _safeSetState(() => _waktuMalam = picked)),
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 40),
-
-                    Text('Jadwal Makan', style: _headingStyle),
-                    const SizedBox(height: 16),
-
-                    _buildNotificationRow(
-                      label: "Sarapan",
-                      isActive: _notifSarapan,
-                      time: _waktuSarapan,
-                      onSwitchChanged: (val) =>
-                          setState(() => _notifSarapan = val),
-                      onTimeTap: () => _selectTime(_waktuSarapan,
-                          (picked) => setState(() => _waktuSarapan = picked)),
-                    ),
-                    const SizedBox(height: 12),
-
-                    _buildNotificationRow(
-                      label: "Makan Siang",
-                      isActive: _notifSiang,
-                      time: _waktuSiang,
-                      onSwitchChanged: (val) =>
-                          setState(() => _notifSiang = val),
-                      onTimeTap: () => _selectTime(_waktuSiang,
-                          (picked) => setState(() => _waktuSiang = picked)),
-                    ),
-                    const SizedBox(height: 12),
-
-                    _buildNotificationRow(
-                      label: "Makan Malam",
-                      isActive: _notifMalam,
-                      time: _waktuMalam,
-                      onSwitchChanged: (val) =>
-                          setState(() => _notifMalam = val),
-                      onTimeTap: () => _selectTime(_waktuMalam,
-                          (picked) => setState(() => _waktuMalam = picked)),
-                    ),
-
-                    const SizedBox(height: 48),
-
-                    ElevatedButton(
+                    GradientButton(
+                      text: 'Simpan Profile',
                       onPressed: _isLoading ? null : _handleSave,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _buttonColor,
-                        minimumSize: const Size(double.infinity, _buttonHeight),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(_buttonRadius)),
-                        elevation: 0,
+                      isLoading: _isLoading,
+                      icon: Icons.save_rounded,
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: _showLogoutDialog,
+                      icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
+                      label: Text('Logout', style: GoogleFonts.inter(color: AppColors.error, fontWeight: FontWeight.w600, fontSize: 16)),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 56),
+                        side: const BorderSide(color: AppColors.error, width: 2),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text('Simpan', style: _buttonTextStyle),
                     ),
                     const SizedBox(height: 40),
                   ],
                 ),
               ),
-<<<<<<< HEAD
-=======
-              const SizedBox(height: 16),
-              
-              _buildEditableRow(
-                label: "Berat Badan", value: _berat, unit: "kg",
-                onEdit: () => _showEditDialog("Berat Badan", _berat, (val) => setState(() => _berat = val)),
-              ),
-              const SizedBox(height: 16),
-              _buildEditableRow(
-                label: "Tinggi Badan", value: _tinggi, unit: "cm",
-                onEdit: () => _showEditDialog("Tinggi Badan", _tinggi, (val) => setState(() => _tinggi = val)),
-              ),
-              const SizedBox(height: 40),
-
-              // --- RIWAYAT KESEHATAN (Tambah Hipertensi) ---
-              Text('Riwayat Kesehatan', style: _headingStyle),
-              const SizedBox(height: 16),
-              _buildCheckbox(
-                label: 'Riwayat Diabetes',
-                value: _diabetesChecked,
-                onChanged: (val) => setState(() => _diabetesChecked = val ?? false)
-              ),
-              _buildCheckbox(
-                label: 'Riwayat Kolesterol',
-                value: _kolesterolChecked,
-                onChanged: (val) => setState(() => _kolesterolChecked = val ?? false)
-              ),
-              _buildCheckbox(
-                label: 'Riwayat Hipertensi', // BARU
-                value: _hipertensiChecked,
-                onChanged: (val) => setState(() => _hipertensiChecked = val ?? false)
-              ),
-              const SizedBox(height: 40),
-
-              // --- BAHAN YANG DIHINDARI (TextField) ---
-              Text('Bahan yang Dihindari', style: _headingStyle),
-              const SizedBox(height: 8),
-              Text(
-                'Pisahkan dengan koma (,) untuk beberapa bahan',
-                style: _labelStyle.copyWith(fontSize: 14, color: Colors.grey.shade700),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _bahanDihindariController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Contoh: gluten, kacang, telur, susu',
-                  hintStyle: GoogleFonts.inter(color: Colors.grey),
-                  filled: true,
-                  fillColor: _textFieldFillColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(_fieldRadius),
-                    borderSide: const BorderSide(color: _dividerColor, width: 1),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(_fieldRadius),
-                    borderSide: const BorderSide(color: _dividerColor, width: 1),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(_fieldRadius),
-                    borderSide: const BorderSide(color: _buttonColor, width: 2),
-                  ),
-                ),
-                style: _labelStyle,
-              ),
-              const SizedBox(height: 40),
-
-              // --- JADWAL MAKAN ---
-              Text('Jadwal Makan', style: _headingStyle),
-              const SizedBox(height: 16),
-              
-              _buildNotificationRow(
-                label: "Sarapan",
-                isActive: _notifSarapan,
-                time: _waktuSarapan,
-                onSwitchChanged: (val) => setState(() => _notifSarapan = val),
-                onTimeTap: () => _selectTime(_waktuSarapan, (picked) => setState(() => _waktuSarapan = picked)),
-              ),
-              const SizedBox(height: 12),
-              
-              _buildNotificationRow(
-                label: "Makan Siang",
-                isActive: _notifSiang,
-                time: _waktuSiang,
-                onSwitchChanged: (val) => setState(() => _notifSiang = val),
-                onTimeTap: () => _selectTime(_waktuSiang, (picked) => setState(() => _waktuSiang = picked)),
-              ),
-              const SizedBox(height: 12),
-              
-              _buildNotificationRow(
-                label: "Makan Malam",
-                isActive: _notifMalam,
-                time: _waktuMalam,
-                onSwitchChanged: (val) => setState(() => _notifMalam = val),
-                onTimeTap: () => _selectTime(_waktuMalam, (picked) => setState(() => _waktuMalam = picked)),
-              ),
-
-              const SizedBox(height: 48),
-
-              // --- TOMBOL SAVE ---
-              ElevatedButton(
-                onPressed: _isLoading ? null : _handleSave,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _buttonColor,
-                  minimumSize: const Size(double.infinity, _buttonHeight),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_buttonRadius)),
-                  elevation: 0,
-                ),
-                child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : Text('Simpan', style: _buttonTextStyle),
-              ),
-              const SizedBox(height: 40),
-            ],
-          ),
-        ),
->>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
       ),
     );
   }
 
-  // --- WIDGET HELPER ---
-
-  Widget _buildDateRow({
-    required String label,
-    required DateTime? date,
-    required VoidCallback onEdit,
-  }) {
-    String displayText = date != null
-        ? DateFormat('dd MMMM yyyy', 'id_ID').format(date)
-        : 'Belum diisi';
-
-    return Container(
-      height: _fieldHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: _textFieldFillColor,
-        borderRadius: BorderRadius.circular(_fieldRadius),
-        border: Border.all(width: 1.0, color: _dividerColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildProfileHeader() {
+    return Center(
+      child: Column(
         children: [
-          Expanded(
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today, color: _buttonColor, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
+          Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.primary, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.2),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 60,
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                   child: Text(
-                    "$label: $displayText",
-                    style: _valueTextStyle.copyWith(fontSize: 18),
-                    overflow: TextOverflow.ellipsis,
+                    _username.isNotEmpty ? _username[0].toUpperCase() : 'U',
+                    style: GoogleFonts.poppins(
+                      fontSize: 48,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
-              ],
+              ),
+              Positioned(
+                bottom: 0,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Hi, $_username',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.edit, color: _textColorBlack),
-            onPressed: onEdit,
+          Text(
+            'Stay healthy and keep tracking!',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateRow({required String label, required DateTime? date, required VoidCallback onEdit}) {
+    String displayText = date != null ? DateFormat('dd MMMM yyyy', 'id_ID').format(date) : 'Belum diisi';
+    return _buildRowItem(icon: Icons.calendar_today_rounded, label: label, value: displayText, onEdit: onEdit);
+  }
+
+  Widget _buildEditableRow({required String label, required String value, required String unit, required VoidCallback onEdit}) {
+    return _buildRowItem(icon: Icons.edit_note_rounded, label: label, value: '$value $unit', onEdit: onEdit);
+  }
+
+  Widget _buildRowItem({required IconData icon, required String label, required String value, required VoidCallback onEdit}) {
+    return InkWell(
+      onTap: onEdit,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.primary, size: 20),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+              Text(value, style: GoogleFonts.inter(fontSize: 15, color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+            ])),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.textHint, size: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggleRow({required IconData icon, required String label, required bool value, required ValueChanged<bool> onChanged}) {
+    return SwitchListTile(
+      secondary: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(icon, color: AppColors.primary, size: 20)),
+      title: Text(label, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+      value: value,
+      onChanged: onChanged,
+      activeColor: AppColors.primary,
+    );
+  }
+
+  Widget _buildNotificationRow({required IconData icon, required String label, required bool isActive, required TimeOfDay time, required ValueChanged<bool> onSwitchChanged, required VoidCallback onTimeTap}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(icon, color: AppColors.primary, size: 20)),
+          const SizedBox(width: 16),
+          Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textPrimary))),
+          InkWell(
+            onTap: isActive ? onTimeTap : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(color: isActive ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent, borderRadius: BorderRadius.circular(8)),
+              child: Text(time.format(context), style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: isActive ? AppColors.primary : AppColors.textSecondary)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch(value: isActive, onChanged: onSwitchChanged, activeColor: AppColors.primary),
         ],
       ),
     );
   }
 
   Future<void> _showDatePicker() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _tanggalLahir ?? DateTime(2000, 1, 1),
-      firstDate: DateTime(1940),
-      lastDate: DateTime.now(),
-      locale: const Locale('id', 'ID'),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: ColorScheme.light(
-              primary: _buttonColor,
-              onPrimary: Colors.white,
-              onSurface: _textColorBlack,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _tanggalLahir = picked;
-        _usia = ProfileService.calculateAge(picked);
-      });
-    }
+    final DateTime? picked = await showDatePicker(context: context, initialDate: _tanggalLahir ?? DateTime(2000, 1, 1), firstDate: DateTime(1940), lastDate: DateTime.now(), locale: const Locale('id', 'ID'));
+    if (picked != null && mounted) { setState(() { _tanggalLahir = picked; _usia = ProfileService.calculateAge(picked); }); }
   }
 
-<<<<<<< HEAD
-  Widget _buildEditableRow(
-      {required String label,
-      required String value,
-      required String unit,
-      required VoidCallback onEdit}) {
-=======
-  Widget _buildEditableRow({
-    required String label,
-    required String value,
-    required String unit,
-    required VoidCallback onEdit
-  }) {
->>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
-    return Container(
-      height: _fieldHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: _textFieldFillColor,
-        borderRadius: BorderRadius.circular(_fieldRadius),
-        border: Border.all(width: 1.0, color: _dividerColor),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-<<<<<<< HEAD
-          Expanded(
-            child: Text(
-              "$label: $value $unit",
-              style: _valueTextStyle,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.edit, color: _textColorBlack),
-            onPressed: onEdit,
-          ),
-=======
-          Text("$label: $value $unit", style: _valueTextStyle),
-          IconButton(
-            icon: const Icon(Icons.edit, color: _textColorBlack),
-            onPressed: onEdit,
-          ),
->>>>>>> f45ca16f0a1406f7eb7f274458bdf7d34b265431
-        ],
-      ),
-    );
+  Future<void> _selectTime(TimeOfDay initial, Function(TimeOfDay) onSelected) async {
+    final TimeOfDay? picked = await showTimePicker(context: context, initialTime: initial);
+    if (picked != null && mounted) onSelected(picked);
   }
 
-  Widget _buildNotificationRow({
-    required String label,
-    required bool isActive,
-    required TimeOfDay time,
-    required ValueChanged<bool> onSwitchChanged,
-    required VoidCallback onTimeTap,
-  }) {
-    return Container(
-      height: _fieldHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: _textFieldFillColor,
-        borderRadius: BorderRadius.circular(_fieldRadius),
-        border: Border.all(width: 1.0, color: _dividerColor),
-      ),
-      child: Row(
-        children: [
-          Switch(
-            value: isActive,
-            onChanged: onSwitchChanged,
-            activeColor: _buttonColor,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: _labelStyle.copyWith(
-                color: isActive
-                    ? _textColorBlack
-                    : _textColorBlack.withOpacity(0.5),
-              ),
-            ),
-          ),
-          InkWell(
-            onTap: isActive ? onTimeTap : null,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? Colors.white.withOpacity(0.5)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                time.format(context),
-                style: _timeTextStyle.copyWith(
-                  color: isActive ? _buttonColor : Colors.grey,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  void _showEditDialog(String title, String currentValue, Function(String) onSave) {
+    TextEditingController controller = TextEditingController(text: currentValue);
+    showDialog(context: context, builder: (context) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), title: Text("Edit $title", style: GoogleFonts.poppins(fontWeight: FontWeight.w700)), content: TextField(controller: controller, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(hintText: 'Enter $title')), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")), ElevatedButton(onPressed: () { if (controller.text.isNotEmpty) onSave(controller.text); Navigator.pop(context); }, child: const Text("Simpan"))]));
   }
 
-  Future<void> _selectTime(
-      TimeOfDay initial, Function(TimeOfDay) onSelected) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: initial,
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: ColorScheme.light(
-              primary: _buttonColor,
-              onPrimary: Colors.white,
-              onSurface: _textColorBlack,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      onSelected(picked);
-    }
-  }
-
-  void _showEditDialog(
-      String title, String currentValue, Function(String) onSave) {
-    TextEditingController controller =
-        TextEditingController(text: currentValue);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: _backgroundColor,
-        title: Text("Edit $title", style: _headingStyle),
-        content: TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: _valueTextStyle,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Batal", style: TextStyle(color: Colors.black)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _buttonColor),
-            onPressed: () {
-              if (controller.text.isNotEmpty) onSave(controller.text);
-              Navigator.pop(context);
-            },
-            child: const Text("Simpan"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCheckbox(
-      {required String label,
-      required bool value,
-      required ValueChanged<bool?> onChanged}) {
-    return CheckboxListTile(
-      title: Text(label, style: _labelStyle),
-      value: value,
-      onChanged: onChanged,
-      activeColor: _buttonColor,
-      controlAffinity: ListTileControlAffinity.leading,
-      contentPadding: EdgeInsets.zero,
-    );
+  void _showLogoutDialog() {
+    showDialog(context: context, builder: (context) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), title: Text('Logout', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)), content: const Text('Apakah Anda yakin ingin keluar?'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')), ElevatedButton(onPressed: () { Navigator.pop(context); logOut(context); }, style: ElevatedButton.styleFrom(backgroundColor: AppColors.error), child: const Text('Logout'))]));
   }
 }

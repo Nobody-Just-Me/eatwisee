@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// Food model representing Indonesian food items with complete nutrition data
 class FoodModel {
   final int? id;
@@ -16,6 +18,8 @@ class FoodModel {
   final String allergens;
   final String recommendedFor;
   final String? imageUrl;
+  final Map<String, dynamic>?
+      nutritionBreakdown; // Detail breakdown nutrisi per sumber
 
   FoodModel({
     this.id,
@@ -34,6 +38,7 @@ class FoodModel {
     required this.allergens,
     required this.recommendedFor,
     this.imageUrl,
+    this.nutritionBreakdown,
   });
 
   /// Convert FoodModel to Map for database insertion
@@ -55,7 +60,23 @@ class FoodModel {
       'allergens': allergens,
       'recommended_for': recommendedFor,
       'image_url': imageUrl,
+      'nutrition_breakdown':
+          nutritionBreakdown != null ? jsonEncode(nutritionBreakdown) : null,
     };
+  }
+
+  /// Helper untuk decode JSON string di nutrition_breakdown
+  static Map<String, dynamic>? _decodeNutritionBreakdown(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      try {
+        return jsonDecode(value) as Map<String, dynamic>;
+      } catch (e) {
+        return null;
+      }
+    }
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return null;
   }
 
   /// Create FoodModel from Map (database query result)
@@ -77,6 +98,7 @@ class FoodModel {
       allergens: map['allergens'] as String,
       recommendedFor: map['recommended_for'] as String,
       imageUrl: map['image_url'] as String?,
+      nutritionBreakdown: _decodeNutritionBreakdown(map['nutrition_breakdown']),
     );
   }
 
@@ -99,6 +121,7 @@ class FoodModel {
       'allergens': allergens,
       'recommended_for': recommendedFor,
       'image_url': imageUrl,
+      'nutrition_breakdown': nutritionBreakdown,
     };
   }
 
@@ -121,6 +144,7 @@ class FoodModel {
       allergens: json['allergens'] as String,
       recommendedFor: json['recommended_for'] as String,
       imageUrl: json['image_url'] as String?,
+      nutritionBreakdown: json['nutrition_breakdown'] as Map<String, dynamic>?,
     );
   }
 
@@ -168,6 +192,7 @@ class FoodModel {
     String? allergens,
     String? recommendedFor,
     String? imageUrl,
+    Map<String, dynamic>? nutritionBreakdown,
   }) {
     return FoodModel(
       id: id ?? this.id,
@@ -186,6 +211,7 @@ class FoodModel {
       allergens: allergens ?? this.allergens,
       recommendedFor: recommendedFor ?? this.recommendedFor,
       imageUrl: imageUrl ?? this.imageUrl,
+      nutritionBreakdown: nutritionBreakdown ?? this.nutritionBreakdown,
     );
   }
 }

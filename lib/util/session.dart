@@ -1,5 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:eatwise2/model/user.dart';
+import 'package:eatwise2/Model/user.dart';
 
 const String IS_LOGIN = 'IS_LOGIN';
 const String JENIS_LOGIN = 'JENIS_LOGIN';

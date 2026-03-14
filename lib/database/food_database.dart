@@ -26,9 +26,30 @@ class FoodDatabase {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 3, // Increment ke v3 untuk PAKSA reseed data
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  /// Handle database upgrade/migration
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Migration dari v1 ke v2: tambah kolom nutrition_breakdown
+      await db.execute('''
+        ALTER TABLE foods ADD COLUMN nutrition_breakdown TEXT
+      ''');
+      print(
+          '✅ Database upgraded to version 2: added nutrition_breakdown column');
+    }
+
+    if (oldVersion < 3) {
+      // Migration v2 ke v3: HAPUS semua data lama dan reseed
+      await db.delete('foods');
+      await _seedData(db);
+      print(
+          '✅ Database upgraded to version 3: RESEEDED all food data with breakdown');
+    }
   }
 
   /// Create database tables
@@ -50,7 +71,8 @@ class FoodDatabase {
         tips TEXT NOT NULL,
         allergens TEXT NOT NULL,
         recommended_for TEXT NOT NULL,
-        image_url TEXT
+        image_url TEXT,
+        nutrition_breakdown TEXT
       )
     ''');
 

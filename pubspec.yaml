@@ -9,8 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   cupertino_icons: ^1.0.2
   intl: ^0.20.2
+  timezone: ^0.9.2
+  flutter_local_notifications: ^17.2.3
   http: ^1.1.0
   shared_preferences: ^2.2.2
   # google_maps_flutter: ^2.5.0
@@ -23,6 +27,7 @@ dependencies:
   sqflite: ^2.3.0
   path: ^1.8.3
   path_provider: ^2.1.0
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:
@@ -31,6 +36,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
   
   assets:
     - assets/models/eatwise_float16.tflite

@@ -3,8 +3,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
-import 'package:eatwise2/model/user.dart';
+import 'package:eatwise2/Model/user.dart';
 import 'package:eatwise2/util/util.dart';
+import 'package:eatwise2/util/app_theme.dart';
+import 'package:eatwise2/widgets/common_widgets.dart';
+import 'package:eatwise2/database/local_database.dart';
 
 class SignUpPage extends StatefulWidget {
   @override
@@ -15,162 +18,255 @@ class _SignUpPageState extends State<SignUpPage> {
   TextEditingController usernameCont = TextEditingController();
   TextEditingController passwordCont = TextEditingController();
   TextEditingController emailCont = TextEditingController();
+  bool _isLoading = false;
+  double _opacity = 0.0;
 
-  static const Color _backgroundColor = Color(0xFFAEB8AF);
-  static const Color _buttonColor = Color(0xFF549E61);
-  static const Color _signinLinkColor = Color(0xFF13721D);
-  static const Color _textColorBlack = Color(0xFF000000);
-  static const Color _dividerColor = Color(0xFF000000);
-
-  static final Shader _titleGradient = const LinearGradient(
-    colors: [Color(0xFF549A5B), Color(0xFF5F9D65), Color(0xFF13721D)],
-    stops: [0.0, 0.44, 0.97],
-  ).createShader(const Rect.fromLTWH(0.0, 0.0, 300.0, 70.0));
-
-  static final TextStyle _titleStyle =
-      GoogleFonts.padauk(fontSize: 59.21, fontWeight: FontWeight.w700);
-  static final TextStyle _subtitleStyle = GoogleFonts.inter(
-      fontSize: 28.12, fontWeight: FontWeight.w500, color: _textColorBlack);
-  static final TextStyle _bodyStyle = GoogleFonts.inter(
-      fontSize: 18.62, fontWeight: FontWeight.w300, color: _textColorBlack);
-  static final TextStyle _buttonTextStyle = GoogleFonts.inter(
-      fontSize: 24.23, fontWeight: FontWeight.w400, color: _textColorBlack);
-  static final TextStyle _bottomTextStyle = GoogleFonts.inter(
-      fontSize: 17.88, fontWeight: FontWeight.w300, color: _textColorBlack);
-  static final TextStyle _bottomLinkStyle = GoogleFonts.inter(
-      fontSize: 17.88, fontWeight: FontWeight.w700, color: _signinLinkColor);
-
-  static const double _sidePadding = 32.0;
-  static const double _buttonHeight = 60.0;
-  static const double _buttonRadius = 55.0;
-  static const double _iconSize = 32.0;
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        setState(() {
+          _opacity = 1.0;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _backgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: _sidePadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 60),
-              ShaderMask(
-                blendMode: BlendMode.srcIn,
-                shaderCallback: (bounds) => _titleGradient,
-                child: Text('EATWISE',
-                    textAlign: TextAlign.center, style: _titleStyle),
+      body: Stack(
+        children: [
+          // Background Gradient
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.primary, AppColors.primaryLight],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-              const SizedBox(height: 36),
-              Text('Create Your Account',
-                  textAlign: TextAlign.center, style: _subtitleStyle),
-              const SizedBox(height: 12),
-              Text('Sign Up Now, Thank Us Later',
-                  textAlign: TextAlign.center, style: _bodyStyle),
-              const SizedBox(height: 48),
-              TextFormField(
-                controller: usernameCont,
-                decoration: const InputDecoration(
-                    icon: Icon(Icons.person), hintText: 'Username'),
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: emailCont,
-                decoration: const InputDecoration(
-                    icon: Icon(Icons.email), hintText: 'Email'),
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: passwordCont,
-                obscureText: true,
-                decoration: const InputDecoration(
-                    icon: Icon(Icons.vpn_key), hintText: 'Password'),
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: prosesRegistrasi,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _buttonColor,
-                  fixedSize: const Size(double.infinity, _buttonHeight),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(_buttonRadius)),
-                  elevation: 0,
-                ),
-                child: Text('Register', style: _buttonTextStyle),
-              ),
-              const SizedBox(height: 32),
-              _buildDividerWithIcon(),
-              const SizedBox(height: 32),
-              Align(
-                alignment: Alignment.center,
-                child: RichText(
-                  text: TextSpan(
-                    text: "Already Have Account ? ",
-                    style: _bottomTextStyle,
-                    children: [
-                      TextSpan(
-                          text: 'Sign In',
-                          style: _bottomLinkStyle,
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => LoginPage()));
-                            }),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 40),
-            ],
+            ),
           ),
-        ),
+          // Decorative Circles
+          Positioned(
+            top: -100,
+            left: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          SafeArea(
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 800),
+              opacity: _opacity,
+              curve: Curves.easeIn,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 60),
+                    // Title Section
+                    Center(
+                      child: Column(
+                        children: [
+                          ShaderMask(
+                            shaderCallback: (bounds) => const LinearGradient(
+                              colors: [Colors.white, Color(0xFFE0E0E0)],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ).createShader(bounds),
+                child: Text('EATWISE',
+                              style: GoogleFonts.poppins(
+                                fontSize: 48,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: 4,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.white.withValues(alpha: 0.3),
+                                    offset: const Offset(0, 0),
+                                    blurRadius: 20,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'JOIN THE HEALTH REVOLUTION',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withValues(alpha: 0.9),
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+                    // Register Card
+                    ModernCard(
+                      isGlass: true,
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Create Account',
+                            style: GoogleFonts.poppins(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Start your journey to a better you',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          ModernInput(
+                            label: 'Username',
+                            hint: 'Choose a username',
+                            prefixIcon: Icons.person_outline,
+                            controller: usernameCont,
+                          ),
+                          const SizedBox(height: 20),
+                          ModernInput(
+                            label: 'Email',
+                            hint: 'Enter your email',
+                            prefixIcon: Icons.email_outlined,
+                            controller: emailCont,
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 20),
+                          ModernInput(
+                            label: 'Password',
+                            hint: 'Create a password',
+                            prefixIcon: Icons.lock_outline,
+                            controller: passwordCont,
+                            obscureText: true,
+                          ),
+                          const SizedBox(height: 32),
+                          GradientButton(
+                            text: 'Register',
+                            isLoading: _isLoading,
+                            onPressed: () async {
+                              setState(() => _isLoading = true);
+                              await prosesRegistrasi();
+                              if (mounted) setState(() => _isLoading = false);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    // Footer
+                    Center(
+                      child: RichText(
+                        text: TextSpan(
+                          text: "Already have an account? ",
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 15,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'Sign In',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => LoginPage(),
+                                    ),
+                                  );
+                                },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildDividerWithIcon() {
-    return Row(
-      children: [
-        Expanded(child: Divider(color: _dividerColor, thickness: 1)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Icon(Icons.restaurant_menu,
-              color: _dividerColor, size: _iconSize),
-        ),
-        Expanded(child: Divider(color: _dividerColor, thickness: 1)),
-      ],
-    );
-  }
 
-  void prosesRegistrasi() async {
-    print('=== PROSES REGISTRASI CALLED ===');
+  Future<void> prosesRegistrasi() async {
+    // Validasi input
+    if (usernameCont.text.trim().isEmpty) {
+      dialog(context, "Username tidak boleh kosong!");
+      return;
+    }
+
+    if (passwordCont.text.trim().isEmpty) {
+      dialog(context, "Password tidak boleh kosong!");
+      return;
+    }
+
+    if (emailCont.text.trim().isEmpty) {
+      dialog(context, "Email tidak boleh kosong!");
+      return;
+    }
+
+    print('=== PROSES REGISTRASI (LOCAL) ===');
     print('Username: ${usernameCont.text}');
     print('Email: ${emailCont.text}');
-    print('Password length: ${passwordCont.text.length}');
 
     try {
-      print('Calling userCreate function...');
-      final response = await userCreate(User(
-          username: usernameCont.text,
-          password: passwordCont.text,
-          email: emailCont.text));
-      print('userCreate function returned');
+      final localDb = LocalDatabase();
+      
+      // Cek apakah username sudah ada
+      final usernameExists = await localDb.checkUsernameExists(usernameCont.text.trim());
+      if (usernameExists) {
+        dialog(context, "Username sudah digunakan!");
+        return;
+      }
 
-      if (response != null) {
-        print('Response: ${response.statusCode} - ${response.body}');
-        if (response.statusCode == 200) {
-          var jsonResp = json.decode(response.body);
-          Navigator.pop(context);
-          dialog(context, jsonResp['message'] ?? 'Registrasi berhasil!');
-        } else {
-          dialog(context, "Registrasi gagal: ${response.body}");
+      // Register user
+      final result = await localDb.registerUser(
+        usernameCont.text.trim(),
+        passwordCont.text.trim(),
+        emailCont.text.trim(),
+      );
+
+      if (result != null) {
+        print('✅ Registrasi berhasil: User ID ${result['id']}');
+        dialog(context, "Registrasi berhasil!");
+        
+        // Tunggu sebentar lalu pindah ke login
+        await Future.delayed(Duration(seconds: 1));
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => LoginPage()),
+          );
         }
       } else {
-        print('Response is null!');
-        dialog(context, "Tidak ada respon dari server");
+        dialog(context, "Registrasi gagal! Silakan coba lagi.");
       }
     } catch (e, stackTrace) {
       print('=== REGISTER ERROR ===');

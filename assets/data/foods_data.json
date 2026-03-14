@@ -14,7 +14,50 @@
       "preparation_time": "20-25 menit",
       "tips": "Pilih nasi goreng dengan lebih banyak sayuran dan protein tanpa lemak. Kurangi penggunaan minyak dan kecap manis. Tambahkan irisan mentimun dan tomat untuk serat tambahan.",
       "allergens": "Telur, Kedelai (kecap), Monosodium Glutamat (MSG) - jika ditambahkan",
-      "recommended_for": "Atlet, pekerja aktif, diet tinggi energi"
+      "recommended_for": "Atlet, pekerja aktif, diet tinggi energi",
+      "nutrition_breakdown": {
+        "calories": {
+          "total": 450,
+          "sources": [
+            {"name": "Nasi Putih", "amount": 250, "percentage": 55.6},
+            {"name": "Ayam & Telur", "amount": 120, "percentage": 26.7},
+            {"name": "Minyak Goreng", "amount": 60, "percentage": 13.3},
+            {"name": "Sayuran", "amount": 20, "percentage": 4.4}
+          ]
+        },
+        "protein": {
+          "total": 18.5,
+          "sources": [
+            {"name": "Ayam", "amount": 12.0, "percentage": 64.9},
+            {"name": "Telur", "amount": 6.0, "percentage": 32.4},
+            {"name": "Nasi", "amount": 0.5, "percentage": 2.7}
+          ]
+        },
+        "carbs": {
+          "total": 62.0,
+          "sources": [
+            {"name": "Nasi Putih", "amount": 58.0, "percentage": 93.5},
+            {"name": "Kecap Manis", "amount": 3.0, "percentage": 4.8},
+            {"name": "Sayuran", "amount": 1.0, "percentage": 1.6}
+          ]
+        },
+        "fat": {
+          "total": 14.0,
+          "sources": [
+            {"name": "Minyak Goreng", "amount": 8.0, "percentage": 57.1},
+            {"name": "Telur", "amount": 4.0, "percentage": 28.6},
+            {"name": "Ayam", "amount": 2.0, "percentage": 14.3}
+          ]
+        },
+        "fiber": {
+          "total": 3.5,
+          "sources": [
+            {"name": "Wortel & Kol", "amount": 2.0, "percentage": 57.1},
+            {"name": "Sawi", "amount": 1.0, "percentage": 28.6},
+            {"name": "Nasi Putih", "amount": 0.5, "percentage": 14.3}
+          ]
+        }
+      }
     },
     {
       "name": "Mie Goreng",
@@ -46,7 +89,46 @@
       "preparation_time": "3-4 jam (masak lambat)",
       "tips": "Makan dengan nasi merah untuk serat lebih tinggi. Batasi porsi karena tinggi lemak jenuh dari santan. Rendang kaya rempah yang baik untuk sistem imun. Simpan di kulkas maksimal 3 hari.",
       "allergens": "Tidak ada alergen umum (cek MSG jika ditambahkan)",
-      "recommended_for": "Diet tinggi protein, bodybuilding, pemulihan pasca sakit"
+      "recommended_for": "Diet tinggi protein, bodybuilding, pemulihan pasca sakit",
+      "nutrition_breakdown": {
+        "calories": {
+          "total": 380,
+          "sources": [
+            {"name": "Daging Sapi", "amount": 180, "percentage": 47.4},
+            {"name": "Santan Kelapa", "amount": 160, "percentage": 42.1},
+            {"name": "Bumbu Rempah", "amount": 40, "percentage": 10.5}
+          ]
+        },
+        "protein": {
+          "total": 28.0,
+          "sources": [
+            {"name": "Daging Sapi", "amount": 27.0, "percentage": 96.4},
+            {"name": "Santan", "amount": 1.0, "percentage": 3.6}
+          ]
+        },
+        "carbs": {
+          "total": 8.0,
+          "sources": [
+            {"name": "Bumbu (Bawang, Gula Merah)", "amount": 6.0, "percentage": 75.0},
+            {"name": "Kelapa Sangrai", "amount": 2.0, "percentage": 25.0}
+          ]
+        },
+        "fat": {
+          "total": 26.0,
+          "sources": [
+            {"name": "Santan Kelapa", "amount": 18.0, "percentage": 69.2},
+            {"name": "Daging Sapi (lemak)", "amount": 6.0, "percentage": 23.1},
+            {"name": "Kelapa Sangrai", "amount": 2.0, "percentage": 7.7}
+          ]
+        },
+        "fiber": {
+          "total": 2.5,
+          "sources": [
+            {"name": "Bumbu Rempah (Cabai, Bawang)", "amount": 1.5, "percentage": 60.0},
+            {"name": "Kelapa Sangrai", "amount": 1.0, "percentage": 40.0}
+          ]
+        }
+      }
     },
     {
       "name": "Sate",
@@ -94,7 +176,54 @@
       "preparation_time": "2-3 jam (untuk semua lauk)",
       "tips": "Pilih 2-3 lauk saja untuk kontrol porsi. Perbanyak sayuran dan kurangi santan. Makan saat makan siang untuk energi seharian. Imbangi dengan sayur dan buah di waktu makan lain. Hindari makan malam karena tinggi kalori.",
       "allergens": "Tidak ada alergen umum (periksa setiap lauk)",
-      "recommended_for": "Pekerja berat, atlet, diet tinggi energi (porsi terkontrol)"
+      "recommended_for": "Pekerja berat, atlet, diet tinggi energi (porsi terkontrol)",
+      "nutrition_breakdown": {
+        "calories": {
+          "total": 650,
+          "sources": [
+            {"name": "Nasi Putih", "amount": 200, "percentage": 30.8},
+            {"name": "Rendang Sapi", "amount": 280, "percentage": 43.1},
+            {"name": "Ayam Pop", "amount": 80, "percentage": 12.3},
+            {"name": "Gulai", "amount": 50, "percentage": 7.7},
+            {"name": "Sambal & Sayur", "amount": 40, "percentage": 6.2}
+          ]
+        },
+        "protein": {
+          "total": 35.0,
+          "sources": [
+            {"name": "Rendang Sapi", "amount": 20.0, "percentage": 57.1},
+            {"name": "Ayam Pop", "amount": 10.0, "percentage": 28.6},
+            {"name": "Telur/Perkedel", "amount": 3.0, "percentage": 8.6},
+            {"name": "Gulai", "amount": 2.0, "percentage": 5.7}
+          ]
+        },
+        "carbs": {
+          "total": 70.0,
+          "sources": [
+            {"name": "Nasi Putih", "amount": 60.0, "percentage": 85.7},
+            {"name": "Perkedel", "amount": 8.0, "percentage": 11.4},
+            {"name": "Sayur Nangka", "amount": 2.0, "percentage": 2.9}
+          ]
+        },
+        "fat": {
+          "total": 28.0,
+          "sources": [
+            {"name": "Rendang (Santan)", "amount": 18.0, "percentage": 64.3},
+            {"name": "Gulai (Santan)", "amount": 6.0, "percentage": 21.4},
+            {"name": "Ayam Pop", "amount": 3.0, "percentage": 10.7},
+            {"name": "Sambal", "amount": 1.0, "percentage": 3.6}
+          ]
+        },
+        "fiber": {
+          "total": 5.0,
+          "sources": [
+            {"name": "Sayur Nangka", "amount": 2.5, "percentage": 50.0},
+            {"name": "Daun Singkong", "amount": 1.5, "percentage": 30.0},
+            {"name": "Nasi Putih", "amount": 0.5, "percentage": 10.0},
+            {"name": "Sambal", "amount": 0.5, "percentage": 10.0}
+          ]
+        }
+      }
     },
     {
       "name": "Soto",

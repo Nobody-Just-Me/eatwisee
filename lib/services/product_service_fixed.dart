@@ -7,7 +7,8 @@ class ProductService {
   // ============================================
   // GET PRODUCT BY BARCODE
   // ============================================
-  static Future<Map<String, dynamic>?> getProductByBarcode(String barcode) async {
+  static Future<Map<String, dynamic>?> getProductByBarcode(
+      String barcode) async {
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.baseUrl}/products.php?barcode=$barcode'),
@@ -61,7 +62,8 @@ class ProductService {
   // ============================================
   // GET ALL PRODUCTS (dengan pagination)
   // ============================================
-  static Future<Map<String, dynamic>?> getAllProducts({int page = 1, int limit = 20}) async {
+  static Future<Map<String, dynamic>?> getAllProducts(
+      {int page = 1, int limit = 20}) async {
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.baseUrl}/products.php?page=$page&limit=$limit'),
@@ -78,7 +80,7 @@ class ProductService {
             final products = (jsonData['data'] as List)
                 .map((product) => ApiHelper.parseProductData(product))
                 .toList();
-            
+
             jsonData['data'] = products;
           }
           return jsonData;
@@ -138,25 +140,40 @@ class ProductService {
         'catatan': catatan,
       };
 
+      final url = '${AppConfig.baseUrl}/api/analyze.php';
+
+      print('📤 Sending analyze request:');
+      print('   URL: $url');
+      print('   Data: $requestData');
+
       final response = await http.post(
-        Uri.parse('${AppConfig.baseUrl}/analyze.php'),
-        headers: {"Content-Type": "application/json"},
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
         body: json.encode(requestData),
       );
 
-      print('Analyze Response: ${response.body}');
+      print('📥 Analyze Response:');
+      print('   Status: ${response.statusCode}');
+      print('   Body: ${response.body}');
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201 || response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         if (jsonData['success'] == true && jsonData['data'] != null) {
           // Parse response data dengan safe parsing
           final data = jsonData['data'];
           return {
             'history_id': ApiHelper.parseInt(data['history_id']),
-            'kalori_dikonsumsi': ApiHelper.parseIntWithDefault(data['kalori_dikonsumsi'], 0),
-            'total_kalori_hari_ini': ApiHelper.parseIntWithDefault(data['total_kalori_hari_ini'], 0),
-            'target_kalori': ApiHelper.parseIntWithDefault(data['target_kalori'], 2000),
-            'persentase_kalori': ApiHelper.parseDoubleWithDefault(data['persentase_kalori'], 0.0),
+            'kalori_dikonsumsi':
+                ApiHelper.parseIntWithDefault(data['kalori_dikonsumsi'], 0),
+            'total_kalori_hari_ini':
+                ApiHelper.parseIntWithDefault(data['total_kalori_hari_ini'], 0),
+            'target_kalori':
+                ApiHelper.parseIntWithDefault(data['target_kalori'], 2000),
+            'persentase_kalori': ApiHelper.parseDoubleWithDefault(
+                data['persentase_kalori'], 0.0),
             'status_aman': ApiHelper.parseBool(data['status_aman']),
             'peringatan_alergi': data['peringatan_alergi'] ?? [],
             'peringatan_penyakit': data['peringatan_penyakit'] ?? [],
@@ -165,10 +182,11 @@ class ProductService {
         }
       }
 
+      print('⚠️ Failed to parse response');
       return null;
     } catch (e) {
-      print('Error analyzing consumption: $e');
-      return null;
+      print('❌ Error analyzing consumption: $e');
+      rethrow;
     }
   }
 }

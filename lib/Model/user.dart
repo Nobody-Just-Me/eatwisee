@@ -22,16 +22,24 @@ class User {
 
 Future<Response?> userCreate(User user) async {
   try {
+    final requestBody = {
+      'username': user.username,
+      'password': user.password,
+      'email': user.email
+    };
+
+    print('=== REGISTER REQUEST ===');
+    print('URL: ${AppConfig.baseUrl}/register.php');
+    print('Body: ${jsonEncode(requestBody)}');
+
     final response = await http.post(
         Uri.parse('${AppConfig.baseUrl}/register.php'),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          'username': user.username,
-          'password': user.password,
-          'email': user.email
-        }));
-    print('Register URL: ${AppConfig.baseUrl}/register.php');
-    print('Register response: ${response.statusCode} - ${response.body}');
+        body: jsonEncode(requestBody));
+
+    print('=== REGISTER RESPONSE ===');
+    print('Status: ${response.statusCode}');
+    print('Body: ${response.body}');
     return response;
   } catch (e) {
     print('Register error: $e');

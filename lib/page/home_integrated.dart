@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:math' as math;
 import 'dart:io';
 import 'package:eatwise2/page/user_profile.dart';
 import 'package:eatwise2/page/scan_page.dart';
 import 'package:eatwise2/page/food_detection_screen.dart';
-import 'package:eatwise2/services/profile_service_fixed.dart';
-import 'package:eatwise2/services/history_service.dart';
+import 'package:eatwise2/services/profile_service_local.dart';
+import 'package:eatwise2/services/history_service_local.dart';
 import 'package:eatwise2/util/session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:eatwise2/util/app_theme.dart';
+import 'package:eatwise2/widgets/common_widgets.dart';
 
 class HomeContent extends StatefulWidget {
   const HomeContent({Key? key}) : super(key: key);
@@ -18,65 +20,10 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
-  // --- ASET DESAIN ---
-  static const Color _backgroundColor = Color.fromARGB(255, 170, 184, 171);
-  static const Color _cardColor = Color.fromARGB(255, 230, 238, 230);
+  // --- ASET DESAIN --- (Legacy styles kept for other sections)
   static const Color _scanButtonColor = Color.fromARGB(255, 230, 238, 230);
-  static const Color _textColorBlack = Color(0xFF000000);
-  static const Color _textColorWhite = Color(0xFFFFFFFF);
   static const Color _brandColorGreen = Color(0xFF13721C);
-  static const Color _antiDesignAccentColor = Color(0xFF000000);
-
-  static const LinearGradient _headerGradient = LinearGradient(
-    colors: [Color(0xFF388E3C), Color(0xFF1B5E20)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  static const LinearGradient _bottomBarGradient = LinearGradient(
-    colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
-    begin: Alignment.bottomLeft,
-    end: Alignment.topRight,
-  );
-
-  static final TextStyle _titleStyle = GoogleFonts.padauk(
-    fontSize: 65,
-    fontWeight: FontWeight.w900,
-    color: _textColorWhite,
-    letterSpacing: 2,
-  );
-
-  static final TextStyle _subtitleStyle = GoogleFonts.inter(
-    fontSize: 28,
-    fontWeight: FontWeight.w500,
-    color: _textColorWhite,
-    height: 1.5,
-  );
-
-  static final TextStyle _cardTextStyle = GoogleFonts.inter(
-    fontSize: 26,
-    fontWeight: FontWeight.w600,
-    color: _textColorBlack,
-  );
-
-  static final TextStyle _calorieNumStyle = GoogleFonts.inter(
-    fontSize: 38,
-    fontWeight: FontWeight.w900,
-    color: _brandColorGreen,
-    letterSpacing: -0.5,
-  );
-
-  static final TextStyle _calorieLabelStyle = GoogleFonts.inter(
-    fontSize: 38,
-    fontWeight: FontWeight.w500,
-    color: _textColorBlack,
-  );
-
   static const double _sidePadding = 20.0;
-  static const double _cardRadius = 10.0;
-  static const double _barRadius = 50.0;
-  static const double _iconSizeLarge = 80.0;
-  static const double _iconSizeMedium = 50.0;
 
   // --- STATE VARIABLES ---
   bool _isLoading = true;
@@ -93,7 +40,7 @@ class _HomeContentState extends State<HomeContent> {
   }
 
   // ============================================
-  // LOAD DATA FROM API
+  // LOAD DATA FROM LOCAL DATABASE (FAST)
   // ============================================
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
@@ -101,35 +48,38 @@ class _HomeContentState extends State<HomeContent> {
     try {
       // Ambil user_id dari session
       final prefs = await SharedPreferences.getInstance();
-      String? uIdString = prefs.getString('user_id');
+      String? uIdString = prefs.getString(ID_User);
       final userId = int.tryParse(uIdString ?? '');
 
       if (userId == null) {
         // User belum login, redirect ke login
-        Navigator.pushReplacementNamed(context, '/login');
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
         return;
       }
 
       setState(() => _userId = userId);
 
-      // Load profile
-      final profile = await ProfileService.getProfile(userId);
+      // Load profile dari local database (FAST - no network)
+      final profile = await ProfileServiceLocal.getProfile(userId);
 
       if (profile != null) {
         // Profile ditemukan
         setState(() {
-          _userName = profile['nama_lengkap'] ?? profile['username'] ?? 'User';
+          _userName =
+              profile['nama_lengkap'] ?? prefs.getString(NAMA) ?? 'User';
           _targetCalories = profile['target_kalori_harian'] ?? 2000;
         });
       } else {
-        // Profile belum ada, buat default
+        // Profile belum ada, gunakan nama dari session login
         setState(() {
-          _userName = prefs.getString('username') ?? 'User';
+          _userName = prefs.getString(NAMA) ?? 'User';
         });
       }
 
-      // Load kalori hari ini dari history_makanan
-      final historyResult = await HistoryService.getTodayHistory(userId);
+      // Load kalori hari ini dari local database (FAST - no network)
+      final historyResult = await HistoryServiceLocal.getTodayHistory(userId);
       if (historyResult != null) {
         setState(() {
           _currentCalories = historyResult['summary']['total_kalori'] ?? 0;
@@ -139,11 +89,15 @@ class _HomeContentState extends State<HomeContent> {
       }
     } catch (e) {
       print('Error loading data: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memuat data: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memuat data: $e')),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -151,108 +105,168 @@ class _HomeContentState extends State<HomeContent> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: _backgroundColor,
-        body: const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(_brandColorGreen),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryLight],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
           ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: _backgroundColor,
-      body: RefreshIndicator(
-        onRefresh: _loadData,
-        color: _brandColorGreen,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              _buildHeader(),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    _sidePadding, 30, _sidePadding, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: _buildClickableCard(
-                        context: context,
-                        widthFactor: 0.9,
-                        height: 180,
-                        icon: Icons.person_outline_sharp,
-                        iconColor: _antiDesignAccentColor,
-                        label: 'Profil',
-                        labelStyle: _cardTextStyle.copyWith(
-                            color: _antiDesignAccentColor),
-                        onTap: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  UserProfileScreen(userId: _userId!),
-                            ),
-                          );
-                          // Reload data setelah kembali dari profile
-                          if (result == true) {
-                            _loadData();
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 65),
-                    Transform.translate(
-                      offset: const Offset(0, 0),
-                      child: _buildClickableCalorieCard(
-                        context: context,
-                        widthFactor: 1.0,
-                        height: 180,
-                        calorieValue: _currentCalories,
-                        targetCalorie: _targetCalories,
-                        progress: _calorieProgress,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  FoodHistoryScreen(userId: _userId!),
-                            ),
-                          ).then((_) => _loadData());
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    // AI Food Detection Card
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: _buildClickableCard(
-                        context: context,
-                        widthFactor: 0.9,
-                        height: 180,
-                        icon: Icons.camera_alt,
-                        iconColor: _brandColorGreen,
-                        label: 'AI Deteksi Makanan',
-                        labelStyle:
-                            _cardTextStyle.copyWith(color: _brandColorGreen),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const FoodDetectionScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+      body: Stack(
+        children: [
+          // Background Gradient
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.primary, AppColors.primaryLight],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const SizedBox(height: 100),
-            ],
+            ),
           ),
-        ),
+          // Decorative Circles
+          Positioned(
+            top: -100,
+            right: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -150,
+            left: -100,
+            child: Container(
+              width: 400,
+              height: 400,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          // Content
+          RefreshIndicator(
+            onRefresh: _loadData,
+            color: AppColors.primary,
+            backgroundColor: Colors.white,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                  _buildHeader(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                        _sidePadding, 20, _sidePadding, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildClickableCalorieCard(
+                          context: context,
+                          widthFactor: 1.0,
+                          height: 180,
+                          calorieValue: _currentCalories,
+                          targetCalorie: _targetCalories,
+                          progress: _calorieProgress,
+                          onTap: () {
+                            if (_userId == null) return;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => FoodHistoryScreen(userId: _userId!),
+                              ),
+                            ).then((_) => _loadData());
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // Quick Actions Grid
+                        GridView.count(
+                          crossAxisCount: 2,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 1.1,
+                          children: [
+                            _buildGridItem(
+                              icon: Icons.qr_code_scanner,
+                              label: 'Scan Barcode',
+                              iconColor: Colors.white,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const ScanPage()),
+                                ).then((_) => _loadData());
+                              },
+                            ),
+                            _buildGridItem(
+                              icon: Icons.auto_awesome,
+                              label: 'AI Detection',
+                              iconColor: Colors.white,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const FoodDetectionScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                            _buildGridItem(
+                              icon: Icons.person_outline,
+                              label: 'Profile',
+                              iconColor: Colors.white,
+                              onTap: () async {
+                                if (_userId == null) return;
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => UserProfileScreen(userId: _userId!),
+                                  ),
+                                );
+                                if (result == true) _loadData();
+                              },
+                            ),
+                            _buildGridItem(
+                              icon: Icons.history,
+                              label: 'History',
+                              iconColor: Colors.white,
+                              onTap: () {
+                                if (_userId == null) return;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => FoodHistoryScreen(userId: _userId!),
+                                  ),
+                                ).then((_) => _loadData());
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 100),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: _buildScanButton(context),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -260,73 +274,127 @@ class _HomeContentState extends State<HomeContent> {
     );
   }
 
+  String _getGreeting() {
+    var hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+
   Widget _buildHeader() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.only(
-        top: 80,
-        bottom: 50,
-        left: _sidePadding,
-        right: _sidePadding,
-      ),
-      decoration: const BoxDecoration(
-        gradient: _headerGradient,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(_barRadius),
-          bottomRight: Radius.circular(_barRadius),
+      padding: const EdgeInsets.fromLTRB(24, 60, 24, 30),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.1),
+            Colors.transparent,
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Row(
         children: [
-          Text('EATWISE', textAlign: TextAlign.center, style: _titleStyle),
-          const SizedBox(height: 15),
-          Text(
-            'Hai,' + _userName,
-            textAlign: TextAlign.center,
-            style: _subtitleStyle,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _getGreeting(),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _userName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        offset: const Offset(0, 2),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 3,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 30,
+              backgroundColor: Colors.white,
+              child: Text(
+                _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                style: GoogleFonts.poppins(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 24,
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildClickableCard({
-    required BuildContext context,
-    required double widthFactor,
-    required double height,
+  Widget _buildGridItem({
     required IconData icon,
-    required Color iconColor,
     required String label,
-    required TextStyle labelStyle,
     required VoidCallback onTap,
+    required Color iconColor,
   }) {
-    return SizedBox(
-      width: MediaQuery.of(context).size.width * widthFactor,
-      height: height,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(_cardRadius),
-        child: Container(
-          decoration: BoxDecoration(
-            color: _cardColor,
-            borderRadius: BorderRadius.circular(_cardRadius),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0x66000000),
-                blurRadius: 8,
-                offset: const Offset(5, 8),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: ModernCard(
+        isGlass: true,
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: _iconSizeLarge, color: iconColor),
-              const SizedBox(height: 15),
-              Text(label, style: labelStyle),
-            ],
-          ),
+              child: Icon(icon, color: iconColor, size: 28),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
@@ -341,70 +409,133 @@ class _HomeContentState extends State<HomeContent> {
     required double progress,
     required VoidCallback onTap,
   }) {
-    return SizedBox(
-      width: MediaQuery.of(context).size.width * widthFactor,
-      height: height,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(_cardRadius),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-          decoration: BoxDecoration(
-            color: _cardColor,
-            borderRadius: BorderRadius.circular(_cardRadius),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0x66000000),
-                blurRadius: 8,
-                offset: const Offset(5, 8),
-              ),
+    int remaining = targetCalorie - calorieValue;
+    if (remaining < 0) remaining = 0;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.white,
+              Colors.white.withValues(alpha: 0.95),
             ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('$calorieValue', style: _calorieNumStyle),
-                  Text('/ $targetCalorie kal',
-                      style: _calorieLabelStyle.copyWith(fontSize: 20)),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.local_fire_department,
+                          color: AppColors.accent,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Daily Calories',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '$remaining',
+                    style: GoogleFonts.poppins(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'kcal remaining',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    '$calorieValue / $targetCalorie kcal',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppColors.textSecondary.withValues(alpha: 0.7),
+                    ),
+                  ),
                 ],
               ),
-              SizedBox(
-                width: 120,
-                height: 120,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CircularProgressIndicator(
-                      value: 1.0,
-                      color: _brandColorGreen.withOpacity(0.3),
-                      strokeWidth: 15,
-                    ),
-                    Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.rotationY(math.pi),
-                      child: CircularProgressIndicator(
-                        value: progress,
-                        color: _brandColorGreen,
-                        strokeWidth: 15,
-                        strokeCap: StrokeCap.square,
+            ),
+            const SizedBox(width: 16),
+            SizedBox(
+              width: 110,
+              height: 110,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0, end: progress),
+                duration: const Duration(milliseconds: 1500),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) {
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CircularProgressIndicator(
+                        value: 1.0,
+                        strokeWidth: 12,
+                        color: AppColors.primary.withValues(alpha: 0.1),
                       ),
-                    ),
-                    Center(
-                      child: Icon(
-                        Icons.local_fire_department,
-                        color: _brandColorGreen,
-                        size: _iconSizeMedium,
+                      CircularProgressIndicator(
+                        value: value,
+                        strokeWidth: 10,
+                        strokeCap: StrokeCap.round,
+                        color: AppColors.primary,
                       ),
-                    ),
-                  ],
-                ),
+                      Center(
+                        child: Text(
+                          '${(value * 100).toInt()}%',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -418,6 +549,7 @@ class _HomeContentState extends State<HomeContent> {
           width: 75,
           height: 75,
           child: FloatingActionButton(
+            heroTag: 'homeScanButton',
             onPressed: () {
               Navigator.push(
                 context,
@@ -443,19 +575,25 @@ class _HomeContentState extends State<HomeContent> {
 
   Widget _buildBottomBar(BuildContext context) {
     return Container(
-      height: 50,
-      decoration: const BoxDecoration(
-        gradient: _bottomBarGradient,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(_barRadius),
-          topRight: Radius.circular(_barRadius),
-        ),
+      height: 60,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
       ),
       child: Center(
         child: Text(
-          'EATWISE 2025',
-          style: _subtitleStyle.copyWith(
-              fontSize: 25, fontWeight: FontWeight.w500),
+          'EATWISE 2026',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
         ),
       ),
     );
@@ -487,10 +625,8 @@ class _FoodHistoryScreenState extends State<FoodHistoryScreen> {
 
   Future<void> _loadHistory() async {
     setState(() => _isLoading = true);
-
     try {
-      final result = await HistoryService.getTodayHistory(widget.userId);
-
+      final result = await HistoryServiceLocal.getTodayHistory(widget.userId);
       if (result != null) {
         setState(() {
           _historyItems = result['data'] ?? [];
@@ -498,7 +634,7 @@ class _FoodHistoryScreenState extends State<FoodHistoryScreen> {
         });
       }
     } catch (e) {
-      print('Error loading history: $e');
+      debugPrint('Error loading history: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -507,100 +643,199 @@ class _FoodHistoryScreenState extends State<FoodHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Riwayat Makanan Hari Ini'),
-        backgroundColor: Color.fromARGB(255, 170, 184, 171),
+        title: Text(
+          'Daily History',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingIndicator()
           : _historyItems.isEmpty
-              ? const Center(
-                  child: Text('Belum ada makanan yang dikonsumsi hari ini'))
+              ? const EmptyState(
+                  icon: Icons.history,
+                  title: 'No history yet',
+                  description: 'Start tracking your meals to see them here!',
+                )
               : RefreshIndicator(
                   onRefresh: _loadHistory,
+                  color: AppColors.primary,
                   child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                     itemCount: _historyItems.length + 1,
                     itemBuilder: (context, index) {
                       if (index == 0) {
-                        return Container(
-                          padding: const EdgeInsets.all(16),
-                          color: Colors.green.shade100,
-                          child: Text(
-                            'Total Kalori Hari Ini: $_totalKalori kal',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: ModernCard(
+                            color: AppColors.primary,
+                            padding: const EdgeInsets.all(20),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.local_fire_department,
+                                      color: Colors.white, size: 32),
+                                ),
+                                const SizedBox(width: 16),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Total Calories Today',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.white.withValues(alpha: 0.9),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '$_totalKalori kcal',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         );
                       }
-
                       final item = _historyItems[index - 1];
-                      return ListTile(
-                        leading: item['image_path'] != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  File(item['image_path']),
-                                  width: 50,
-                                  height: 50,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.fastfood,
-                                        size: 40, color: Colors.green);
-                                  },
-                                ),
-                              )
-                            : const Icon(Icons.fastfood,
-                                size: 40, color: Colors.green),
-                        title: Text(item['food_name'] ?? 'Unknown'),
-                        subtitle: Text(
-                            '${item['kalori']} kal • ${item['serving_size'] ?? '1 porsi'}'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () async {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Hapus Item'),
-                                content: const Text(
-                                    'Yakin ingin menghapus item ini?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                    child: const Text('Batal'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, true),
-                                    child: const Text('Hapus'),
-                                  ),
-                                ],
-                              ),
-                            );
-
-                            if (confirm == true) {
-                              final success =
-                                  await HistoryService.deleteHistoryItem(
-                                item['id'],
-                                widget.userId,
-                              );
-
-                              if (success) {
-                                _loadHistory();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text('Item berhasil dihapus')),
-                                );
-                              }
-                            }
-                          },
-                        ),
-                      );
+                      return _buildHistoryItem(item);
                     },
                   ),
                 ),
     );
+  }
+
+  Widget _buildHistoryItem(dynamic item) {
+    final String? imagePath = item['image_path'];
+    final bool isLocalPath = imagePath != null &&
+        (imagePath.startsWith('/') || imagePath.contains('cache'));
+    final bool hasValidImage = imagePath != null && imagePath.isNotEmpty;
+    String timeStr = 'Today';
+    if (item['created_at'] != null) {
+      try {
+        DateTime dt = DateTime.parse(item['created_at']);
+        timeStr = DateFormat('HH:mm').format(dt);
+      } catch (_) {}
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: ModernCard(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 64,
+                height: 64,
+                color: AppColors.primary.withValues(alpha: 0.05),
+                child: hasValidImage
+                    ? (isLocalPath
+                        ? Image.file(File(imagePath), fit: BoxFit.cover)
+                        : Image.network(imagePath, fit: BoxFit.cover))
+                    : Icon(Icons.fastfood, color: AppColors.primary, size: 32),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item['food_name'] ?? 'Unknown',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${item['kalori']} kcal • ${item['serving_size'] ?? '1 serving'}',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  timeStr,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                  onPressed: () => _confirmDelete(item),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(dynamic item) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Remove Item?', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        content: const Text('Are you sure you want to remove this meal from your history?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      final success = await HistoryServiceLocal.deleteHistoryItem(
+        item['id'],
+        widget.userId,
+      );
+      if (success) {
+        _loadHistory();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Item successfully removed')),
+          );
+        }
+      }
+    }
   }
 }

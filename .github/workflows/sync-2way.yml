@@ -1,0 +1,25 @@
+name: 🔄 2-Way Sync
+
+on:
+  push:
+    branches: ['**']
+    tags: ['**']
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror to peer remote
+        run: |
+          REPO_NAME=$(basename ${{ github.repository }})
+          git clone --mirror https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/${{ github.repository }}.git repo.git
+          cd repo.git
+
+          if [ "${{ github.repository_owner }}" = "Nobody-Just-Me" ]; then
+            TARGET="https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/FawwazFA/${REPO_NAME}.git"
+          else
+            TARGET="https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/Nobody-Just-Me/${REPO_NAME}.git"
+          fi
+
+          echo "Syncing to $TARGET..."
+          git push --mirror "$TARGET" || true
